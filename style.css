@@ -455,6 +455,7 @@ html, body {
 /* AI分析結果のフォント色を白 */
 #ai-analysis-result {
   color: #fff;
+  text-align: left;
 }
 /* 選択科目一覧の科目名を白 */
 .year-block ul li {
@@ -505,4 +506,14 @@ body {
   width: 520px !important;
   min-width: 520px !important;
   max-width: 520px !important;
+}
+
+/* メイン要素にwidth:520pxを指定 */
+body, #main-area, .course-card, #dpRadarChart, .chart-toggle, #credit-summary, #selected-courses-list {
+  width: 600px !important;
+  min-width: 600px !important;
+  max-width: 600px !important;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
 }
