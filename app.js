@@ -38,16 +38,37 @@ function renderSelectedCoursesList() {
     if (!yearGroups[year]) yearGroups[year] = [];
     yearGroups[year].push(course);
   });
+  // 年次ごとの単位数が36を超えていたら超過分を次の年次へ移動
+  const maxCreditsPerYear = 36;
+  const sortedYears = Object.keys(yearGroups).map(Number).sort((a, b) => a - b);
+  for (let i = 0; i < sortedYears.length; i++) {
+    let year = sortedYears[i];
+    let courses = yearGroups[year];
+    let totalCredits = courses.reduce((sum, c) => sum + (c.credits || 0), 0);
+    while (totalCredits > maxCreditsPerYear) {
+      // 超過分を次の年次へ移動
+      // 最後に追加された科目から順に移動
+      const moveCourse = courses.pop();
+      if (!moveCourse) break;
+      let nextYear = sortedYears[i + 1] || (year + 1);
+      if (!yearGroups[nextYear]) yearGroups[nextYear] = [];
+      yearGroups[nextYear].unshift(moveCourse); // 先頭に追加
+      totalCredits -= moveCourse.credits || 0;
+    }
+  }
   // 年次順で表示
-  const sortedYears = Object.keys(yearGroups).sort((a, b) => Number(a) - Number(b));
-  container.innerHTML = sortedYears.map(year => `
-    <div class='year-block' style='margin-bottom:1.5em;'>
-      <h3 style='color:#00bfff;'>${year}年次</h3>
-      <ul style='margin-left:1em;'>
-        ${yearGroups[year].map(c => `<li>${c.name} <span style='color:#ffd700;'>(${c.credits}単位)</span></li>`).join('')}
-      </ul>
-    </div>
-  `).join('');
+  container.innerHTML = sortedYears.map(year => {
+    const yearCourses = yearGroups[year];
+    const yearCredits = yearCourses.reduce((sum, c) => sum + (c.credits || 0), 0);
+    return `
+      <div class='year-block' style='margin-bottom:1.5em;'>
+        <h3 style='color:#00bfff;'>${year}年次：${yearCredits}単位</h3>
+        <ul style='margin-left:1em;'>
+          ${yearCourses.map(c => `<li>${c.name} <span style='color:#ffd700;'>(${c.credits}単位)</span></li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }).join('');
 }
 
 // サイバーパンクUI初期化関数
@@ -71,6 +92,9 @@ function showMainApp() {
   });
   const main = document.getElementById("main-area");
   main.innerHTML = `
+    <div id="reference-area" style="margin-bottom:1em;">
+      <button id="reference-btn" class="cyberpunk-btn" style="background:#00bfff;color:#fff;">参考資料：履修モデル一覧</button>
+    </div>
     <section id="ranking-section">
       <h2>おすすめランキング</h2>
       <div id="ranking-list"></div>
@@ -148,6 +172,7 @@ function showMainApp() {
       renderCharts();
       renderPieCharts();
       renderSelectedCoursesList();
+      updateSelectedCreditInfo(); // 単位数表示を更新
     };
   }
   // AI分析スタートボタンのonclick設定
@@ -156,6 +181,13 @@ function showMainApp() {
     aiBtn.onclick = async () => {
       await renderAIAnalysis();
       aiBtn.remove(); // 一度押したらボタン削除
+    };
+  }
+  // 参考資料ボタンの機能追加（描画後に設定）
+  const refBtn = document.getElementById("reference-btn");
+  if (refBtn) {
+    refBtn.onclick = () => {
+      window.open('https://drive.google.com/drive/folders/16wsROeRv6IP4_vq88JSx3bo3mHreOY_x?usp=drive_link', '_blank');
     };
   }
   setupFloatMenu(); // 診断完了後にMenuボタン初期化
@@ -205,36 +237,117 @@ function showDiagnosisStep() {
   const main = document.getElementById("main-area");
   if (diagnosisStep === 1) {
     main.innerHTML = `<div class="cyberpunk-init">
-      <div class="ai-message">Q1. あなたはどんな分野に興味がありますか？（複数選択可）</div>
+      <div class="ai-message">Q1. あなたはどんな分野に興味がありますか？（最大5つまで優先順位付きで選択）</div>
       <form id="q1-form">
-        <label><input type="checkbox" name="q1" value="pops"> ポピュラー音楽</label><br>
-        <label><input type="checkbox" name="q1" value="classic"> クラシック音楽</label><br>
-        <label><input type="checkbox" name="q1" value="sound"> サウンドエンジニアリング</label><br>
-        <label><input type="checkbox" name="q1" value="dance"> ダンス</label><br>
-        <label><input type="checkbox" name="q1" value="act"> 演劇・声優</label><br>
-        <label><input type="checkbox" name="q1" value="vocal"> オペラ・ミュージカル</label><br>
-        <label><input type="checkbox" name="q1" value="entertainment"> エンタメ・総合芸術</label><br>
-        <label><input type="checkbox" name="q1" value="it"> IT・先端技術</label>
+        ${[
+          {key: "pops", label: "ポピュラー音楽"},
+          {key: "classic", label: "クラシック音楽"},
+          {key: "sound", label: "サウンドエンジニアリング"},
+          {key: "dance", label: "ダンス・身体表現"},
+          {key: "act", label: "演劇・声優"},
+          {key: "vocal", label: "オペラ・ミュージカル・声楽"},
+          {key: "entertainment", label: "エンタメ・総合芸術"},
+          {key: "it", label: "IT・先端技術"}
+        ].map(domain => `<button type="button" class="q1-select-btn" data-key="${domain.key}">${domain.label}</button><br>`).join('')}
       </form>
+      <div id="q1-selected-list" style="margin:1em 0;"></div>
       <button id="next-btn" class="cyberpunk-btn">次へ</button>
     </div>`;
+    let selectedQ1 = [];
+    const maxQ1 = 5;
+    const q1Options = [
+      {key: "pops", label: "ポピュラー音楽"},
+      {key: "classic", label: "クラシック音楽"},
+      {key: "sound", label: "サウンドエンジニアリング"},
+      {key: "dance", label: "ダンス・身体表現"},
+      {key: "act", label: "演劇・声優"},
+      {key: "vocal", label: "オペラ・ミュージカル・声楽"},
+      {key: "entertainment", label: "エンタメ・総合芸術"},
+      {key: "it", label: "IT・先端技術"}
+    ];
+    const q1Btns = Array.from(document.querySelectorAll('.q1-select-btn'));
+    const selectedList = document.getElementById('q1-selected-list');
+    function updateSelectedList() {
+      selectedList.innerHTML = selectedQ1.map((key, idx) => {
+        const opt = q1Options.find(o => o.key === key);
+        return `<span style='color:#00ff99;font-weight:bold;margin-right:1em;'>${idx+1}位：${opt ? opt.label : key}</span><br>`;
+      }).join('');
+      q1Btns.forEach(btn => {
+        btn.disabled = selectedQ1.length >= maxQ1 && !selectedQ1.includes(btn.dataset.key);
+        btn.classList.toggle('selected', selectedQ1.includes(btn.dataset.key));
+        btn.style.background = selectedQ1.includes(btn.dataset.key) ? '#ffff00' : '#80ee80';
+        btn.style.color = '#222';
+      });
+    }
+    q1Btns.forEach(btn => {
+      btn.onclick = () => {
+        const key = btn.dataset.key;
+        if (selectedQ1.includes(key)) {
+          selectedQ1 = selectedQ1.filter(k => k !== key);
+        } else if (selectedQ1.length < maxQ1) {
+          selectedQ1.push(key);
+        }
+        updateSelectedList();
+      };
+      btn.style.background = '#80ee80';
+      btn.style.color = '#222';
+    });
+    updateSelectedList();
     document.getElementById("next-btn").onclick = () => {
-      userAnswers.q1 = Array.from(document.querySelectorAll('input[name="q1"]:checked')).map(e => e.value);
+      userAnswers.q1 = selectedQ1;
       diagnosisStep = 2;
       showDiagnosisStep();
     };
   } else if (diagnosisStep === 2) {
     main.innerHTML = `<div class="cyberpunk-init">
-      <div class="ai-message">Q2. あなたは次のどのキーワード群に興味がありますか？（複数選択可）</div>
+      <div class="ai-message">Q2. あなたは次のどのキーワード群に興味がありますか？（最大3つまで優先順位付きで選択）</div>
       <form id="q2-form">
-        <label><input type="checkbox" name="q2" value="create"> 創造・制作・ものづくり・形にする（クリエイト）</label><br>
-        <label><input type="checkbox" name="q2" value="performance"> 演奏・表現・舞台に立つ・気持ちを伝える（パフォーマンス）</label><br>
-        <label><input type="checkbox" name="q2" value="business"> 販売・流通・人の役に立つ・誰かを支える・チームワーク（ビジネス）</label>
+        ${[
+          {key: "create", label: "クリエイト・創作・制作・ものづくり"},
+          {key: "performance", label: "パフォーマンス・演奏・表現・舞台に立つ"},
+          {key: "business", label: "ビジネス・販売・チームワーク・誰かを支える"}
+        ].map(field => `<button type="button" class="q2-select-btn" data-key="${field.key}">${field.label}</button><br>`).join('')}
       </form>
+      <div id="q2-selected-list" style="margin:1em 0;"></div>
       <button id="next-btn" class="cyberpunk-btn">次へ</button>
     </div>`;
+    let selectedQ2 = [];
+    const maxQ2 = 3;
+    const q2Options = [
+      {key: "create", label: "クリエイト・創作・制作・ものづくり"},
+      {key: "performance", label: "パフォーマンス・演奏・表現・舞台に立つ"},
+      {key: "business", label: "ビジネス・販売・チームワーク・誰かを支える"}
+    ];
+    const q2Btns = Array.from(document.querySelectorAll('.q2-select-btn'));
+    const selectedList = document.getElementById('q2-selected-list');
+    function updateSelectedList() {
+      selectedList.innerHTML = selectedQ2.map((key, idx) => {
+        const opt = q2Options.find(o => o.key === key);
+        return `<span style='color:#00ff99;font-weight:bold;margin-right:1em;'>${idx+1}位：${opt ? opt.label : key}</span><br>`;
+      }).join('');
+      q2Btns.forEach(btn => {
+        btn.disabled = selectedQ2.length >= maxQ2 && !selectedQ2.includes(btn.dataset.key);
+        btn.classList.toggle('selected', selectedQ2.includes(btn.dataset.key));
+        btn.style.background = selectedQ2.includes(btn.dataset.key) ? '#ffff00' : '#80ee80';
+        btn.style.color = '#222';
+      });
+    }
+    q2Btns.forEach(btn => {
+      btn.onclick = () => {
+        const key = btn.dataset.key;
+        if (selectedQ2.includes(key)) {
+          selectedQ2 = selectedQ2.filter(k => k !== key);
+        } else if (selectedQ2.length < maxQ2) {
+          selectedQ2.push(key);
+        }
+        updateSelectedList();
+      };
+      btn.style.background = '#80ee80';
+      btn.style.color = '#222';
+    });
+    updateSelectedList();
     document.getElementById("next-btn").onclick = () => {
-      userAnswers.q2 = Array.from(document.querySelectorAll('input[name="q2"]:checked')).map(e => e.value);
+      userAnswers.q2 = selectedQ2;
       diagnosisStep = 3;
       showDiagnosisStep();
     };
@@ -256,8 +369,8 @@ function showDiagnosisStep() {
       q3Btns.forEach(btn => {
         btn.disabled = selectedQ3.length >= maxQ3 && !selectedQ3.includes(btn.dataset.key);
         btn.classList.toggle('selected', selectedQ3.includes(btn.dataset.key));
-        btn.style.background = selectedQ3.includes(btn.dataset.key) ? '#ffd700' : '';
-        btn.style.color = selectedQ3.includes(btn.dataset.key) ? '#222' : '';
+        btn.style.background = selectedQ3.includes(btn.dataset.key) ? '#ffff00' : '#80ee80';
+        btn.style.color = '#222';
       });
     }
     q3Btns.forEach(btn => {
@@ -270,6 +383,8 @@ function showDiagnosisStep() {
         }
         updateSelectedList();
       };
+      btn.style.background = '#80ee80';
+      btn.style.color = '#222';
     });
     updateSelectedList();
     document.getElementById("next-btn").onclick = () => {
@@ -284,7 +399,52 @@ function showDiagnosisStep() {
 } // showDiagnosisStep関数ここで閉じる
 
 // --- 以降はグローバル関数宣言 ---
+  // DP
+  const dpKeys = Object.keys(dpLabels);
+  // 軸ごとの色分け（1～6:青, 7～11:緑, 12～17:黄, 18～20:赤)
+  const axisColors = dpKeys.map((_, idx) => {
+    if (idx < 6) return '#00bfff';      // 青
+    if (idx < 11) return '#00ff99';     // 緑
+    if (idx < 17) return '#ffd700';     // 黄
+    return '#ff6666';                   // 赤
+  });
+
 function renderCharts() {
+  const drawArcsPlugin = {
+    id: 'drawArcs',
+    afterDraw: chart => {
+      if (!chart._drawArcsValues) return;
+      // デバッグ: 弧の半径値を出力
+      const arcColors = ["#00bfff", "#00ff99", "#ffd700", "#ff6666"];
+      const arcSegments = [6, 5, 6, 3]; // DP1, DP2, DP3, DP4の詳細DP数
+      const totalSegments = 20;
+      const { ctx, chartArea } = chart;
+      if (!chartArea) return;
+      const centerX = chartArea.width / 2 + chartArea.left;
+      const centerY = chartArea.height / 2 + chartArea.top;
+      const maxRadius = 100;
+      const minRadius = 10;
+      const arcWidth = 8;
+      chart._drawArcsValues.forEach((val, i) => {
+        // 180度+90度回転（Math.PI + Math.PI/2加算）
+        const startAngle = Math.PI + Math.PI/2 + arcSegments.slice(0, i).reduce((sum, seg) => sum + (seg / totalSegments) * Math.PI * 2, 0);
+        const arcLength = (arcSegments[i] / totalSegments) * Math.PI * 2;
+        const endAngle = startAngle + arcLength;
+        // 半径を(dpGroupValues[i] - 0.07) * 300に
+        const arcRadius = (val - 0.07) * 300;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, arcRadius, startAngle, endAngle, false);
+        ctx.strokeStyle = arcColors[i];
+        ctx.lineWidth = arcWidth;
+        ctx.globalAlpha = 0.7;
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+  };
+  Chart.register(drawArcsPlugin);
+  
   const selected = courseData.filter(c => selectedCourses.includes(c.id));
   // 全科目のDP合計値（分母）
   const dpKeys = Object.keys(dpLabels);
@@ -302,10 +462,23 @@ function renderCharts() {
     const denom = totalDP[key] || 1;
     return Math.round((selectedDP[key] / denom) * 100) / 100;
   });
+  // 大項目DP集計（DP1,DP2,DP3,DP4）
+  const dpGroups = [
+    dpKeys.filter(k => k.startsWith('1-')), // DP1
+    dpKeys.filter(k => k.startsWith('2-')), // DP2
+    dpKeys.filter(k => k.startsWith('3-')), // DP3
+    dpKeys.filter(k => k.startsWith('4-'))  // DP4
+  ];
+  const dpGroupValues = dpGroups.map(group => {
+    const total = group.reduce((sum, k) => sum + (totalDP[k] || 0), 0);
+    const selected = group.reduce((sum, k) => sum + (selectedDP[k] || 0), 0);
+    return total ? selected / total : 0;
+  });
   // Q3選択DPのみ白でハイライト
   const highlightKeys = userAnswers.q3 || [];
-  const labelColors = dpKeys.map(key => highlightKeys.includes(key) ? '#fff' : '#00ff99');
-  const radarCtx = document.getElementById("dpRadarChart").getContext("2d");
+  const labelColors = dpKeys.map((key, idx) => highlightKeys.includes(key) ? '#fff' : axisColors[idx]);
+  const radarCanvas = document.getElementById("dpRadarChart");
+  const radarCtx = radarCanvas.getContext("2d");
   if (radarChart) radarChart.destroy();
   radarChart = new Chart(radarCtx, {
     type: "radar",
@@ -324,11 +497,37 @@ function renderCharts() {
       plugins: {
         legend: { display: false },
         tooltip: {},
+        
+        // 弧描画プラグイン
+        afterDraw: chart => {
+          const arcColors = ["#00bfff", "#00ff99", "#ffd700", "#ff6666"];
+          const { ctx, chartArea } = chart;
+          if (!chartArea) return;
+          const centerX = chartArea.width / 2 + chartArea.left;
+          const centerY = chartArea.height / 2 + chartArea.top;
+          const arcRadius = Math.min(chartArea.width, chartArea.height) * 0.45;
+          const arcWidth = 10;
+          dpGroupValues.forEach((val, i) => {
+            const startAngle = (Math.PI * 0.5) + (i * Math.PI * 0.5);
+            const endAngle = startAngle + (Math.PI * 2 * val * 0.25); // 0～0.25周
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, arcRadius, startAngle, endAngle, false);
+            ctx.strokeStyle = arcColors[i];
+            ctx.lineWidth = arcWidth;
+            ctx.globalAlpha = 0.7;
+            ctx.stroke();
+            ctx.restore();
+          });
+          
+        }
+        
       },
       scales: {
         r: {
           min: 0,
           max: 1,
+          radius: 1.2,
           ticks: {
             stepSize: 0.1,
             color: 'transparent',
@@ -338,11 +537,31 @@ function renderCharts() {
           grid: { color: '#181f2b' },
           pointLabels: {
             font: { size: 13 },
-            color: labelColors // 色配列のみ
+            color: labelColors // 軸ごとに色分け
           }
         }
       }
     }
+    
+  });
+  radarChart._drawArcsValues = dpGroupValues;
+  // 弧の描画（DP1:青, DP2:緑, DP3:黄, DP4:赤）
+  const arcColors = ["#00bfff", "#00ff99", "#ffd700", "#ff6666"];
+  const centerX = radarCanvas.width / 2;
+  const centerY = radarCanvas.height / 2;
+  const arcRadius = radarCanvas.width * 0.45;
+  const arcWidth = 10;
+  dpGroupValues.forEach((val, i) => {
+    const startAngle = (Math.PI * 0.5) + (i * Math.PI * 0.5);
+    const endAngle = startAngle + (Math.PI * 2 * val * 0.25); // 0～0.25周
+    radarCtx.save();
+    radarCtx.beginPath();
+    radarCtx.arc(centerX, centerY, arcRadius, startAngle, endAngle, false);
+    radarCtx.strokeStyle = arcColors[i];
+    radarCtx.lineWidth = arcWidth;
+    radarCtx.globalAlpha = 0.7;
+    radarCtx.stroke();
+    radarCtx.restore();
   });
   const creditSum = selected.reduce((sum, c) => sum + c.credits, 0);
   const creditSummary = document.getElementById("credit-summary");
@@ -479,6 +698,7 @@ function renderCharts() {
         renderCharts();
         renderPieCharts();
         renderSelectedCoursesList();
+        updateSelectedCreditInfo();
       }
 
 
@@ -556,7 +776,17 @@ function createCourseCard(course, selectable, showBadge) {
   }
   return card;
 }
-
+function updateSelectedCreditInfo() {
+  // 選択科目の合計単位数を計算
+  let n = selectedCourses.reduce((sum, id) => {
+    const c = courseData.find(x => x.id === id);
+    return c ? sum + c.credits : sum;
+  }, 0);
+  const creditDiv = document.getElementById('selected-credit-info');
+  if (creditDiv) {
+    creditDiv.textContent = `${n}/100`;
+  }
+}
 function renderPieCharts() {
   const selected = courseData.filter(c => selectedCourses.includes(c.id));
   // フィールド
@@ -624,25 +854,40 @@ function renderPieCharts() {
 }
 
 function setupFloatMenu() {
-  // 既存削除
-  document.getElementById('float-menu')?.remove();
-  document.getElementById('menu-btn')?.remove();
+  document.getElementById('float-menu-container')?.remove();
+  // 親コンテナ生成
+  const container = document.createElement('div');
+  container.id = 'float-menu-container';
+  container.style = 'position:fixed;top:16px;left:16px;z-index:1000;display:flex;flex-direction:column;align-items:flex-start;';
+
   // Menuボタン
   const btn = document.createElement('button');
   btn.className = 'menu-btn';
   btn.id = 'menu-btn';
   btn.textContent = 'Menu';
   btn.onclick = () => showFloatMenu();
-  document.body.appendChild(btn);
+  container.appendChild(btn);
+
+  // 単位数表示エリア（常にcontainer配下に移動）
+  let creditDiv = document.getElementById('selected-credit-info');
+  if (!creditDiv) {
+    creditDiv = document.createElement('div');
+    creditDiv.id = 'selected-credit-info';
+    creditDiv.style = 'position:fixed;top:80px;left:16px;margin:0;font-size:1.1em;color:#00ff99;text-align:left;background:transparent;z-index:1001;';
+  } else {
+    creditDiv.style = 'position:fixed;top:80px;left:16px;margin:0;font-size:1.1em;color:#00ff99;text-align:left;background:transparent;z-index:1001;';
+  }
+  document.body.appendChild(creditDiv); // float-menu-containerではなくbody直下に固定表示
+  document.body.appendChild(container);
+  updateSelectedCreditInfo(); // 内容を必ず更新
 }
 
 function showFloatMenu() {
-  // 既存削除
   document.getElementById('float-menu')?.remove();
-  // メニュー本体
+  // メニュー本体生成
   const menu = document.createElement('div');
-  menu.className = 'float-menu';
   menu.id = 'float-menu';
+  menu.className = 'float-menu';
   // 閉じるボタン
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close-btn';
@@ -685,13 +930,20 @@ function showFloatMenu() {
 async function renderAIAnalysis() {
   const data = getSelectedFieldDomainDP();
   // DP獲得率（例: DP名と値のリスト）
-  const dpRate = data.dpLabelsArr.map((label, i) => `${label}: ${data.dpData[i]}`).join(', ');
+  // 最大獲得値（仮にdata.dpMaxArrで取得、なければ定数で最大値を定義）
+  const dpMaxArr = data.dpMaxArr || [20, 20, 20, 20, 20, 20]; // DP数に応じて最大値を設定
+  const dpRate = data.dpLabelsArr.map((label, i) => {
+    const val = data.dpData[i];
+    const max = dpMaxArr[i] || 1;
+    const percent = Math.round((val / max) * 100);
+    return `${label}: ${percent}%`;
+  }).join(', ');
   // 専門性と履修領域（例: フィールド・分野名と値のリスト）
   const fieldRate = data.fieldLabels.map((label, i) => `${label}: ${data.fieldData[i]}`).join(', ');
   const domainRate = data.domainLabels.map((label, i) => `${label}: ${data.domainData[i]}`).join(', ');
   const specialty = `フィールド: ${fieldRate}\n分野: ${domainRate}`;
   // プロンプト生成
-  const prompt = `この「履修モデル」で得られる能力や専門性をですます調かつ推測口調で解説してください。\n各項100字以内。主語は用いない。Markdown記号を使用しない。\n\n【DP獲得率】\n${dpRate}\n【専門性と履修領域】\n${specialty}\n\n以下の4構成で出力してください。\n\n1. 専門性のバランスと特徴\n専門性と履修領域のバランスから見る、育成される専門家像。\n\n2. DPから見る「養われる力」\n得られる能力と、意識して補うべき能力\n\n3. 目指せる将来の進路\n具体的かつ一般的に知名度の高い職業名を3つ以上(理由付き)。\n\n4. 学習のアドバイス\n大学生活で意識すべき取り組みや、学外で補うべきスキルの助言。`;
+  const prompt = `この「履修モデル」で得られる能力や専門性をですます調かつ推測口調で解説してください。\n各項100字以内。主語は用いない。Markdown記号を使用しない。\n\n【DP獲得率】\n${dpRate}\n【専門性と履修領域】\n${specialty}\n\n以下の4構成で出力してください。\n\n1. 専門性のバランスと特徴\n専門性(パフォーマンス・クリエイト・ビジネス)と履修領域（音楽・舞台・エンタメ・情報）の双方を組み合わせた専門家像について解説。\n\n2. DPから見る「養われる力」\n得られる能力と、意識して補うべき能力\n\n3. 目指せる将来の進路\n具体的かつ一般的に知名度の高い職業名を3つ以上(理由付き)。\n\n4. 学習のアドバイス\n大学生活で意識すべき取り組みや、学外で補うべきスキルの助言。`;
   // API送信
   const resultDiv = document.getElementById('ai-analysis-result');
   resultDiv.innerHTML = '<div style="color:#00bfff;">AI分析中...</div>';
@@ -742,8 +994,6 @@ function getSelectedFieldDomainDP() {
   const domainKeys = ["music", "stage", "entertainment", "it"];
   const domainLabels = ["音楽表現", "舞台芸術", "エンタメ", "情報技術"];
   const domainData = domainKeys.map(key => selected.reduce((sum, c) => sum + (c.domains && c.domains[key] ? c.domains[key] : 0), 0));
-  // DP
-  const dpKeys = Object.keys(dpLabels);
   const dpLabelsArr = dpKeys.map(k => dpLabels[k]);
   const dpData = dpKeys.map(key => selected.reduce((sum, c) => sum + (c.dp && c.dp[key] ? c.dp[key] : 0), 0));
   return {
@@ -752,3 +1002,23 @@ function getSelectedFieldDomainDP() {
     dpKeys, dpLabelsArr, dpData
   };
 }
+
+// 重み付け関数（選択数に応じて重み配列を返す）
+function getWeights(n) {
+  if (n === 1) return [1];
+  if (n === 2) return [0.6, 0.4];
+  if (n === 3) return [0.5, 0.3, 0.2];
+  if (n === 4) return [0.4, 0.3, 0.2, 0.1];
+  if (n === 5) return [0.3, 0.25, 0.2, 0.15, 0.1];
+  return Array(n).fill(1/n);
+}
+
+// 参考資料ボタンの機能追加
+setTimeout(() => {
+  const refBtn = document.getElementById("reference-btn");
+  if (refBtn) {
+    refBtn.onclick = () => {
+      window.open('https://drive.google.com/drive/folders/16wsROeRv6IP4_vq88JSx3bo3mHreOY_x?usp=drive_link', '_blank');
+    };
+  }
+}, 0);

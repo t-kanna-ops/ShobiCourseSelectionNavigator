@@ -314,6 +314,30 @@ html, body {
   font-weight: bold;
 }
 
+/* Q1,Q2,Q3選択肢のフォント色を白 */
+#q1-form label,
+#q2-form label,
+.dp-checkboxes .q3-select-btn {
+  color: #fff;
+}
+/* Q3選択肢のみフォント色を黒 */
+.dp-checkboxes .q3-select-btn {
+  color: #222;
+}
+/* 診断UI・選択肢の間のマージン */
+#q1-form,
+#q2-form,
+#q3-form {
+  margin-top: 1em;
+}
+
+/* Q1,Q2,Q3の選択肢ボタンを太字にする */
+.q1-select-btn,
+.q2-select-btn,
+.q3-select-btn {
+  font-weight: bold;
+}
+
 @media (max-width: 600px) {
   #main-area {
     padding: 0.5em;
@@ -406,4 +430,32 @@ html, body {
   height: 2em;
   cursor: pointer;
   box-shadow: 0 0 8px #00ff99;
+}
+
+/* Menuボタンと単位数表示の親コンテナ */
+#float-menu-container {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+/* 単位数表示div */
+#selected-credit-info {
+  margin: 8px 0 0 0;
+  font-size: 1.1em;
+  color: #ffffff;
+  text-align: left;
+  background: transparent;
+}
+
+/* AI分析結果のフォント色を白 */
+#ai-analysis-result {
+  color: #fff;
+}
+/* 選択科目一覧の科目名を白 */
+.year-block ul li {
+  color: #fff;
 }
