@@ -111,6 +111,7 @@ html, body {
   font-family: var(--wf-font);
   color: var(--wf-green);
   min-height: 100vh;
+  text-align: center;
 }
 
 /* ヘッダー */
@@ -146,6 +147,7 @@ html, body {
   padding: 2em 1em 1em 1em;
   max-width: 520px;
   margin: 0 auto;
+  text-align: center;
 }
 
 /* 初期化・診断エリア */
@@ -460,26 +462,37 @@ html, body {
   color: #fff;
 }
 
-/* レーダーチャートcanvasのズレ防止対策 */
+/* レーダーチャートcanvasのズレ防止・安定化対策 */
 #dpRadarChart {
   display: block;
   margin: 0 auto;
   box-sizing: border-box;
-  width: 400px;
+  width: 520px;
   height: 400px;
-  max-width: 100vw;
-  max-height: 100vw;
   padding: 0;
 }
 @media (max-width: 600px) {
   #dpRadarChart {
     width: 90vw;
-    height: 90vw;
-    max-width: 90vw;
-    max-height: 90vw;
+    height: 300px;
   }
 }
-body, #main-area {
+body {
   margin: 0;
   padding: 0;
+  background: var(--wf-bg);
+  font-family: var(--wf-font);
+  color: var(--wf-green);
+  min-height: 100vh;
+  text-align: center;
+}
+#main-area {
+  padding: 2em 1em 1em 1em;
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+#selected-courses-list {
+  text-align: left;
 }

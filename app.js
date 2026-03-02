@@ -434,7 +434,8 @@ function renderCharts() {
         const baseRadius = Math.min(chartArea.width, chartArea.height) * 0.45;
         const minRadius = baseRadius * 0.5;
         const maxRadius = baseRadius;
-        const arcRadius = (minRadius + (maxRadius - minRadius) * val - 110)*2;
+        // const arcRadius = (minRadius + (maxRadius - minRadius) * val);
+        const arcRadius = (val)*200;
         ctx.save();
         ctx.beginPath();
         ctx.arc(centerX, centerY, arcRadius, startAngle, endAngle, false);
