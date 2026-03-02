@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>履修科目選択ナビゲーター</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="cyberpunk-header">
+    <h1><span class="ai-icon">📚</span> 履修科目選択アシスタント</h1>
+    <p class="cyberpunk-sub">履修についてのお悩み解決！履修計画サポートアプリ</p>
+  </header>
+  <main id="main-area">
+        <section id="ranking-section">
+          <h2>おすすめランキング</h2>
+          <div id="ranking-list"></div>
+        </section>
+    <div id="assistant-init" class="cyberpunk-init">
+      <button id="start-assistant-btn" class="cyberpunk-btn">履修科目選択アシスタントを起動する</button>
+    </div>
+    <!-- 以降のUIはJSで動的生成 -->
+  </main>
+  <footer class="cyberpunk-footer">
+    <small>&copy; 2026 履修科目選択アシスタント</small>
+  </footer>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
