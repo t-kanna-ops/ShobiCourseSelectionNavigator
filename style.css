@@ -497,3 +497,12 @@ body {
 #selected-courses-list {
   text-align: left;
 }
+
+/* 520px指定の要素をスマホでも固定 */
+#main-area,
+.course-card,
+#dpRadarChart {
+  width: 520px !important;
+  min-width: 520px !important;
+  max-width: 520px !important;
+}
