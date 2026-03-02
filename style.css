@@ -459,3 +459,27 @@ html, body {
 .year-block ul li {
   color: #fff;
 }
+
+/* レーダーチャートcanvasのズレ防止対策 */
+#dpRadarChart {
+  display: block;
+  margin: 0 auto;
+  box-sizing: border-box;
+  width: 400px;
+  height: 400px;
+  max-width: 100vw;
+  max-height: 100vw;
+  padding: 0;
+}
+@media (max-width: 600px) {
+  #dpRadarChart {
+    width: 90vw;
+    height: 90vw;
+    max-width: 90vw;
+    max-height: 90vw;
+  }
+}
+body, #main-area {
+  margin: 0;
+  padding: 0;
+}
