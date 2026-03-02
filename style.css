@@ -340,7 +340,7 @@ html, body {
   font-weight: bold;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 520px) {
   #main-area {
     padding: 0.5em;
     max-width: 100vw;
@@ -355,7 +355,7 @@ html, body {
   }
   h2 {
     width: 100%;
-    max-width: 600px;
+    max-width: 520px;
     box-sizing: border-box;
     font-size: 1em;
   }
@@ -450,7 +450,6 @@ html, body {
   font-size: 1.1em;
   color: #ffffff;
   text-align: left;
-  background: transparent;
 }
 
 /* AI分析結果のフォント色を白 */
@@ -467,11 +466,13 @@ html, body {
   display: block;
   margin: 0 auto;
   box-sizing: border-box;
-  width: 520px;
+  width: 520px !important;
+  min-width: 520px !important;
+  max-width: 520px !important;
   height: 400px;
   padding: 0;
 }
-@media (max-width: 600px) {
+@media (max-width: 520px) {
   #dpRadarChart {
     width: 90vw;
     height: 300px;
