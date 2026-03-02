@@ -237,7 +237,7 @@ function showDiagnosisStep() {
   const main = document.getElementById("main-area");
   if (diagnosisStep === 1) {
     main.innerHTML = `<div class="cyberpunk-init">
-      <div class="ai-message">Q1. あなたはどんな分野に興味がありますか？（最大5つまで優先順位付きで選択）</div>
+      <div class="ai-message">Q1. あなたはどんな分野に興味がありますか？<br>（最大5つまで優先順位付きで選択）</div>
       <form id="q1-form">
         ${[
           {key: "pops", label: "ポピュラー音楽"},
@@ -300,7 +300,7 @@ function showDiagnosisStep() {
     };
   } else if (diagnosisStep === 2) {
     main.innerHTML = `<div class="cyberpunk-init">
-      <div class="ai-message">Q2. あなたは次のどのキーワード群に興味がありますか？（最大3つまで優先順位付きで選択）</div>
+      <div class="ai-message">Q2. あなたは次のどのキーワード群に興味がありますか？<br>（最大3つまで優先順位付きで選択）</div>
       <form id="q2-form">
         ${[
           {key: "create", label: "クリエイト・創作・制作・ものづくり"},
@@ -353,7 +353,7 @@ function showDiagnosisStep() {
     };
   } else if (diagnosisStep === 3) {
     main.innerHTML = `<div class="cyberpunk-init">
-      <div class="ai-message">Q3. 特に身につけたい力は？（最大5つまで優先順位付きで選択）</div>
+      <div class="ai-message">Q3. 特に身につけたい力は？<br>（最大5つまで優先順位付きで選択）</div>
       <form id="q3-form" class="dp-checkboxes">
         ${Object.entries(dpLabels).map(([key, label]) => `<button type="button" class="q3-select-btn" data-key="${key}">${label}</button>`).join('')}
       </form>

@@ -145,7 +145,7 @@ html, body {
 /* メインエリア */
 #main-area {
   padding: 2em 1em 1em 1em;
-  max-width: 520px;
+  max-width: 600px;
   margin: 0 auto;
   text-align: center;
 }
@@ -340,7 +340,7 @@ html, body {
   font-weight: bold;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 600px) {
   #main-area {
     padding: 0.5em;
     max-width: 100vw;
@@ -355,7 +355,7 @@ html, body {
   }
   h2 {
     width: 100%;
-    max-width: 520px;
+    max-width: 600px;
     box-sizing: border-box;
     font-size: 1em;
   }
@@ -467,13 +467,13 @@ html, body {
   display: block;
   margin: 0 auto;
   box-sizing: border-box;
-  width: 520px !important;
-  min-width: 520px !important;
-  max-width: 520px !important;
+  width: 600px !important;
+  min-width: 600px !important;
+  max-width: 600px !important;
   height: 400px;
   padding: 0;
 }
-@media (max-width: 520px) {
+@media (max-width: 600px) {
   #dpRadarChart {
     width: 90vw;
     height: 300px;
@@ -490,7 +490,7 @@ body {
 }
 #main-area {
   padding: 2em 1em 1em 1em;
-  max-width: 520px;
+  max-width: 600px;
   margin: 0 auto;
   text-align: center;
 }
@@ -499,16 +499,16 @@ body {
   text-align: left;
 }
 
-/* 520px指定の要素をスマホでも固定 */
+/* 600px指定の要素をスマホでも固定 */
 #main-area,
 .course-card,
 #dpRadarChart {
-  width: 520px !important;
-  min-width: 520px !important;
-  max-width: 520px !important;
+  width: 600px !important;
+  min-width: 600px !important;
+  max-width: 600px !important;
 }
 
-/* メイン要素にwidth:520pxを指定 */
+/* メイン要素にwidth:600pxを指定 */
 body, #main-area, .course-card, #dpRadarChart, .chart-toggle, #credit-summary, #selected-courses-list {
   width: 600px !important;
   min-width: 600px !important;
