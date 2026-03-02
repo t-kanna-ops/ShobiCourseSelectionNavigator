@@ -438,7 +438,7 @@ function renderCharts() {
         const arcRadius = (val)*200;
         ctx.save();
         ctx.beginPath();
-        ctx.arc(centerX, centerY, arcRadius, startAngle, endAngle, false);
+        ctx.arc(centerX+5, centerY, arcRadius, startAngle, endAngle, false);
         ctx.strokeStyle = arcColors[i];
         ctx.lineWidth = arcWidth;
         ctx.globalAlpha = 0.7;
@@ -516,7 +516,7 @@ function renderCharts() {
             const endAngle = startAngle + (Math.PI * 2 * val * 0.25); // 0～0.25周
             ctx.save();
             ctx.beginPath();
-            ctx.arc(centerX, centerY, arcRadius, startAngle, endAngle, false);
+            ctx.arc(centerX+5, centerY, arcRadius, startAngle, endAngle, false);
             ctx.strokeStyle = arcColors[i];
             ctx.lineWidth = arcWidth;
             ctx.globalAlpha = 0.7;
@@ -560,7 +560,7 @@ function renderCharts() {
     const endAngle = startAngle + (Math.PI * 2 * val * 0.25); // 0～0.25周
     radarCtx.save();
     radarCtx.beginPath();
-    radarCtx.arc(centerX, centerY, arcRadius, startAngle, endAngle, false);
+    radarCtx.arc(centerX+5, centerY, arcRadius, startAngle, endAngle, false);
     radarCtx.strokeStyle = arcColors[i];
     radarCtx.lineWidth = arcWidth;
     radarCtx.globalAlpha = 0.7;
