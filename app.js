@@ -430,8 +430,11 @@ function renderCharts() {
         const startAngle = Math.PI + Math.PI/2 + arcSegments.slice(0, i).reduce((sum, seg) => sum + (seg / totalSegments) * Math.PI * 2, 0);
         const arcLength = (arcSegments[i] / totalSegments) * Math.PI * 2;
         const endAngle = startAngle + arcLength;
-        // 半径を(dpGroupValues[i] - 0.07) * 300に
-        const arcRadius = (val - 0.07) * 300;
+        // レーダーチャートと同じ基準で半径を算出
+        const baseRadius = Math.min(chartArea.width, chartArea.height) * 0.45;
+        const minRadius = baseRadius * 0.5;
+        const maxRadius = baseRadius;
+        const arcRadius = (minRadius + (maxRadius - minRadius) * val - 110)*2;
         ctx.save();
         ctx.beginPath();
         ctx.arc(centerX, centerY, arcRadius, startAngle, endAngle, false);
