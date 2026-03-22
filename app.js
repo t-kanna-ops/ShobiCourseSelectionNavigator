@@ -1,3 +1,78 @@
+// ダーク/ライトモード切替UI
+function setupColorModeToggle() {
+  // 既存ボタン削除
+  document.getElementById('color-mode-toggle')?.remove();
+  // ボタン生成
+  const btn = document.createElement('button');
+  btn.id = 'color-mode-toggle';
+  btn.textContent = isLightMode() ? '🌙 ダークモード' : '☀ ライトモード';
+  btn.style = 'position:fixed;top:18px;right:24px;z-index:3000;padding:0.6em 1.2em;font-size:1.1em;border-radius:16px;background:#fff;color:#222;border:2px solid #00ff99;box-shadow:0 0 8px #00ff99;cursor:pointer;transition:all 0.2s;';
+  btn.onclick = () => {
+    const next = !isLightMode();
+    setLightMode(next);
+    btn.textContent = next ? '🌙 ダークモード' : '☀ ライトモード';
+  };
+  document.body.appendChild(btn);
+}
+
+function isLightMode() {
+  return document.body.classList.contains('light-mode');
+}
+function setLightMode(on) {
+  if(on) document.body.classList.add('light-mode');
+  else document.body.classList.remove('light-mode');
+}
+// ページロード時に切替ボタン設置
+window.addEventListener('DOMContentLoaded',()=>{
+  setupColorModeToggle();
+});
+
+// Q1～Q4回答後におすすめクラスをランキング下に表示
+async function renderClassRecommendationAreaByProfile(profile) {
+  document.getElementById('class-recommend-area')?.remove();
+  // class.csv取得
+  let csv = '';
+  try {
+    const res = await fetch('class.csv');
+    csv = await res.text();
+  } catch(e) {
+    return;
+  }
+  const lines = csv.split(/\r?\n/).filter(l=>l.trim());
+  // 属性一致数でスコア付け
+  const results = lines.map(line=>{
+    const cols = line.split(',');
+    if(cols.length<7) return null;
+    const attrs = cols.slice(3,7);
+    let score = 0;
+    let highlight = [0,0,0,0];
+    profile.forEach((ans,idx)=>{
+      attrs.forEach((attr,aid)=>{
+        if(ans===attr) { score++; highlight[aid]++; }
+      });
+    });
+    return { code:cols[0], className:cols[1], teacher:cols[2], attrs, score, highlight };
+  }).filter(Boolean);
+  results.sort((a,b)=>b.score-b.score||b.highlight.reduce((s,v)=>s+v,0)-a.highlight.reduce((s,v)=>s+v,0));
+  const html = results.slice(0,5).map(r=>{
+    const attrHtml = r.attrs.map((attr,idx)=>'<span style="'+(r.highlight[idx]>0?`font-weight:bold;color:#ffe066;filter:drop-shadow(0 0 4px #ffe066);`.repeat(r.highlight[idx]):'')+'">'+attr+'</span>').join(' / ');
+    return `<div style='margin-bottom:1.2em;padding:1em 1.2em;background:#333;border-radius:10px;box-shadow:0 0 8px #00ff99;'>
+      <div style='font-size:1.1em;font-weight:bold;'>${r.className}</div>
+      <div>教員: <span style='color:#00ff99;'>${r.teacher}</span></div>
+      <div>属性: ${attrHtml}</div>
+      <div style='margin-top:0.5em;'><a href='https://cps-portal.shobi-u.ac.jp/cpsmart/public/dashboard/main/ja/simple/1900/3000280/wsl/SyllabusSansho?kogiCd=${r.code}' target='_blank' style='color:#00bfff;text-decoration:underline;'>シラバスを見る</a></div>
+    </div>`;
+  }).join('');
+  // ランキング下に挿入
+  const rankingSection = document.getElementById('ranking-section');
+  if (rankingSection) {
+    const area = document.createElement('div');
+    area.id = 'class-recommend-area';
+    area.style = 'margin:2em 0;padding:2em;background:#222;color:#fff;border-radius:16px;box-shadow:0 0 16px #00ff99;max-width:700px;';
+    area.innerHTML = `<div style='font-size:1.3em;font-weight:bold;margin-bottom:1em;'>あなたにおすすめの基礎演習クラス</div><div id='class-recommend-result'>${html||'該当クラスがありません'}</div>`;
+    rankingSection.insertAdjacentElement('afterend', area);
+  }
+}
 // データファイルのロード確認
 if (typeof courseData === 'undefined' || typeof dpLabels === 'undefined') {
   document.body.innerHTML = '<div style="color:red;font-size:1.2em;padding:2em;">データファイル（data.js）が正しく読み込まれていません。<br>index.htmlの&lt;script src="data.js"&gt;がapp.jsより先に記述されているか確認してください。</div>';
@@ -442,7 +517,18 @@ function showDiagnosisStep() {
     document.getElementById("next-btn").onclick = () => {
       userAnswers.q4 = selectedQ4;
       diagnosisStep = 5;
+      // Q1: domains, Q2: fields, Q3: dp, Q4: instrument
+      // fields/domains/instrument属性を優先的にprofile配列にまとめる
+      const profile = [];
+      // Q1: domains
+      if (Array.isArray(userAnswers.q1)) profile.push(...userAnswers.q1);
+      // Q2: fields
+      if (Array.isArray(userAnswers.q2)) profile.push(...userAnswers.q2);
+      // Q4: instrument
+      if (Array.isArray(userAnswers.q4)) profile.push(...userAnswers.q4);
+      // Q3はdpだがclass.csvには直接使わないので除外
       showMainApp();
+      setTimeout(()=>renderClassRecommendationAreaByProfile(profile), 100);
     };
   } else if (diagnosisStep === 5) {
     // 診断・おすすめ科目抽出はshowMainAppで実行
@@ -791,13 +877,55 @@ function createCourseCard(course, selectable, showBadge) {
     row.appendChild(req);
     // 選択ボタンは絶対に生成しない
   } else if (selectable) {
+    // すべて概要ボタン
     const btn = document.createElement("button");
-    btn.textContent = selectedCourses.includes(course.id) ? "選択解除" : "選択";
+    btn.textContent = "概要";
+    btn.className = "course-summary-btn";
     btn.onclick = () => {
-      toggleCourseSelection(course.id);
+      showSyllabusFloatWindow(course);
     };
-    btn.className = "course-select-btn";
     row.appendChild(btn);
+  }
+  // シラバスフロートウィンドウ表示関数（kamoku.csv参照）
+  async function showSyllabusFloatWindow(course) {
+    document.getElementById('syllabus-float-window')?.remove();
+    const win = document.createElement('div');
+    win.id = 'syllabus-float-window';
+    win.style = 'position:fixed;top:10vh;left:50%;transform:translateX(-50%);z-index:2000;background:#222;color:#fff;padding:2em 1.5em;border-radius:16px;box-shadow:0 0 24px #00ff99;max-width:600px;width:90vw;max-height:80vh;overflow:auto;';
+    win.innerHTML = `<div style='font-size:1.2em;font-weight:bold;margin-bottom:1em;'>${course.name}（概要）</div><div id='syllabus-desc' style='min-height:5em;margin-bottom:2em;'>読み込み中...</div><div style='margin-top:1.5em;text-align:right;'><button id='syllabus-select-btn' class='cyberpunk-btn' style='margin-right:1em;'>選択</button><button id='syllabus-close-btn' class='cyberpunk-btn'>閉じる</button></div>`;
+    document.body.appendChild(win);
+    // 概要文取得
+    try {
+      const res = await fetch('kamoku.csv');
+      const text = await res.text();
+      const lines = text.split(/\r?\n/);
+      let found = '';
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const m = line.match(/^"?([^",]+)"?,"?([^"]*)"?$/);
+        if (m && m[1].trim() === course.name.trim()) {
+          found = m[2].replace(/"/g, '').replace(/\r|\n/g, '<br>');
+          break;
+        }
+      }
+      document.getElementById('syllabus-desc').innerHTML = found || '（概要文が見つかりません）';
+    } catch(e) {
+      document.getElementById('syllabus-desc').innerHTML = '（概要文の取得に失敗しました）';
+    }
+    // 選択ボタン
+    document.getElementById('syllabus-select-btn').onclick = () => {
+      if (!selectedCourses.includes(course.id)) selectedCourses.push(course.id);
+      renderCourseList();
+      renderCharts();
+      renderPieCharts();
+      renderSelectedCoursesList();
+      updateSelectedCreditInfo();
+      win.remove();
+    };
+    // 閉じるボタン
+    document.getElementById('syllabus-close-btn').onclick = () => {
+      win.remove();
+    };
   }
   const info = document.createElement("div");
   info.className = "course-info";
