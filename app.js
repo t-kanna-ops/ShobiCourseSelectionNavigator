@@ -6,7 +6,7 @@ if (typeof courseData === 'undefined' || typeof dpLabels === 'undefined') {
 // グローバル状態管理
 let selectedCourses = [];
 let radarChart;
-let userAnswers = { q1: [], q2: [], q3: [] };
+let userAnswers = { q1: [], q2: [], q3: [], q4: [] };
 let diagnosisStep = 0;
 // グローバル宣言（分析結果表示用）
 let aiAnalysisResult = '';
@@ -390,9 +390,61 @@ function showDiagnosisStep() {
     document.getElementById("next-btn").onclick = () => {
       userAnswers.q3 = selectedQ3;
       diagnosisStep = 4;
-      showMainApp();
+      showDiagnosisStep();
     };
   } else if (diagnosisStep === 4) {
+    main.innerHTML = `<div class="cyberpunk-init">
+      <div class="ai-message">Q4. 演奏経験がある、もしくは演奏できるようになりたい楽器は？<br>（当てはまるものをすべて選択。なければそのまま「次へ」）</div>
+      <form id="q4-form">
+        ${[
+          {key: "keyboard", label: "キーボード・ピアノ"},
+          {key: "brass",    label: "吹奏楽器（管楽器・打楽器など）"},
+          {key: "ensemble", label: "アンサンブル（ドラム・ギター・ベースなど）"},
+          {key: "vocal",    label: "ボーカル・合唱"}
+        ].map(opt => `<button type="button" class="q4-select-btn" data-key="${opt.key}">${opt.label}</button><br>`).join('')}
+      </form>
+      <div id="q4-selected-list" style="margin:1em 0;"></div>
+      <button id="next-btn" class="cyberpunk-btn">診断する</button>
+    </div>`;
+    let selectedQ4 = [];
+    const q4Options = [
+      {key: "keyboard", label: "キーボード・ピアノ"},
+      {key: "brass",    label: "吹奏楽器（管楽器・打楽器など）"},
+      {key: "ensemble", label: "アンサンブル（ドラム・ギター・ベースなど）"},
+      {key: "vocal",    label: "ボーカル・合唱"}
+    ];
+    const q4Btns = Array.from(document.querySelectorAll('.q4-select-btn'));
+    const q4SelectedList = document.getElementById('q4-selected-list');
+    function updateQ4List() {
+      q4SelectedList.innerHTML = selectedQ4.map(key => {
+        const opt = q4Options.find(o => o.key === key);
+        return `<span style='color:#00ff99;font-weight:bold;margin-right:1em;'>✔ ${opt ? opt.label : key}</span>`;
+      }).join('');
+      q4Btns.forEach(btn => {
+        btn.style.background = selectedQ4.includes(btn.dataset.key) ? '#ffff00' : '#80ee80';
+        btn.style.color = '#222';
+      });
+    }
+    q4Btns.forEach(btn => {
+      btn.onclick = () => {
+        const key = btn.dataset.key;
+        if (selectedQ4.includes(key)) {
+          selectedQ4 = selectedQ4.filter(k => k !== key);
+        } else {
+          selectedQ4.push(key);
+        }
+        updateQ4List();
+      };
+      btn.style.background = '#80ee80';
+      btn.style.color = '#222';
+    });
+    updateQ4List();
+    document.getElementById("next-btn").onclick = () => {
+      userAnswers.q4 = selectedQ4;
+      diagnosisStep = 5;
+      showMainApp();
+    };
+  } else if (diagnosisStep === 5) {
     // 診断・おすすめ科目抽出はshowMainAppで実行
     showMainApp();
   }
@@ -584,7 +636,16 @@ function renderCharts() {
           entertainment: c => c.domains.entertainment,
           it: c => c.domains.it
         };
-        const sorted = courseData.filter(c => !c.isTeaching && !String(c.category).startsWith('6'));
+        // Q4: 楽器フラグを持つ科目で、q4で一つも選択されていない楽器カテゴリは除外
+        const q4Selected = userAnswers.q4 || [];
+        const sorted = courseData.filter(c => {
+          if (c.isTeaching || String(c.category).startsWith('6')) return false;
+          // instrumentフラグがある科目：q4で対応する楽器を選んでいなければ除外
+          if (c.instrument) {
+            return q4Selected.includes(c.instrument);
+          }
+          return true;
+        });
         let maxScore = 1;
         sorted.forEach(course => {
           let score = 0;
