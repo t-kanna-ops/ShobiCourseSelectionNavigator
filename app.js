@@ -39,7 +39,7 @@ async function renderClassRecommendationAreaByProfile(profile) {
     return;
   }
   const lines = csv.split(/\r?\n/).filter(l=>l.trim());
-  // 属性一致数でスコア付け
+  // 属性一致数でスコア付け＋最大一致数からおすすめ度(%)算出
   const results = lines.map(line=>{
     const cols = line.split(',');
     if(cols.length<7) return null;
@@ -53,14 +53,17 @@ async function renderClassRecommendationAreaByProfile(profile) {
     });
     return { code:cols[0], className:cols[1], teacher:cols[2], attrs, score, highlight };
   }).filter(Boolean);
+  // 最大スコアを基準におすすめ度%を算出
+  const maxScore = Math.max(...results.map(r=>r.score), 1);
+  results.forEach(r=>{ r.percent = Math.round((r.score / maxScore) * 100); });
   results.sort((a,b)=>b.score-b.score||b.highlight.reduce((s,v)=>s+v,0)-a.highlight.reduce((s,v)=>s+v,0));
-  const html = results.slice(0,5).map(r=>{
-    const attrHtml = r.attrs.map((attr,idx)=>'<span style="'+(r.highlight[idx]>0?`font-weight:bold;color:#ffe066;filter:drop-shadow(0 0 4px #ffe066);`.repeat(r.highlight[idx]):'')+'">'+attr+'</span>').join(' / ');
+  const html = results.slice(0,5).map((r,idx)=>{
+    const attrHtml = r.attrs.map((attr,idx2)=>'<span style="'+(r.highlight[idx2]>0?`font-weight:bold;color:#ffe066;filter:drop-shadow(0 0 4px #ffe066);`.repeat(r.highlight[idx2]):'')+'">'+attr+'</span>').join(' / ');
     return `<div style='margin-bottom:1.2em;padding:1em 1.2em;background:#333;border-radius:10px;box-shadow:0 0 8px #00ff99;'>
-      <div style='font-size:1.1em;font-weight:bold;'>${r.className}</div>
+      <div style='font-size:1.1em;font-weight:bold;'>${idx+1}位：${r.className}</div>
       <div>教員: <span style='color:#00ff99;'>${r.teacher}</span></div>
       <div>属性: ${attrHtml}</div>
-      <div style='margin-top:0.5em;'><a href='https://cps-portal.shobi-u.ac.jp/cpsmart/public/dashboard/main/ja/simple/1900/3000280/wsl/SyllabusSansho?kogiCd=${r.code}' target='_blank' style='color:#00bfff;text-decoration:underline;'>シラバスを見る</a></div>
+      <div style='margin-top:0.5em;'><span style='color:#ffd700;font-weight:bold;'>おすすめ度 ${r.percent}%</span>　<a href='https://cps-portal.shobi-u.ac.jp/cpsmart/public/dashboard/main/ja/simple/1900/3000280/wsl/SyllabusSansho?kogiCd=${r.code}' target='_blank' style='color:#00bfff;text-decoration:underline;'>シラバスを見る</a></div>
     </div>`;
   }).join('');
   // ランキング下に挿入
@@ -69,7 +72,7 @@ async function renderClassRecommendationAreaByProfile(profile) {
     const area = document.createElement('div');
     area.id = 'class-recommend-area';
     area.style = 'margin:2em 0;padding:2em;background:#222;color:#fff;border-radius:16px;box-shadow:0 0 16px #00ff99;max-width:700px;';
-    area.innerHTML = `<div style='font-size:1.3em;font-weight:bold;margin-bottom:1em;'>あなたにおすすめの基礎演習クラス</div><div id='class-recommend-result'>${html||'該当クラスがありません'}</div>`;
+    area.innerHTML = `<div style='font-size:1.3em;font-weight:bold;margin-bottom:1em;'>あなたにおすすめの基礎演習クラス</div><div id='class-recommend-result'>${html}</div>`;
     rankingSection.insertAdjacentElement('afterend', area);
   }
 }
