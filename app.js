@@ -1,31 +1,3 @@
-// ダーク/ライトモード切替UI
-function setupColorModeToggle() {
-  // 既存ボタン削除
-  document.getElementById('color-mode-toggle')?.remove();
-  // ボタン生成
-  const btn = document.createElement('button');
-  btn.id = 'color-mode-toggle';
-  btn.textContent = isLightMode() ? '🌙 ダークモード' : '☀ ライトモード';
-  btn.style = 'position:fixed;top:18px;right:24px;z-index:3000;padding:0.6em 1.2em;font-size:1.1em;border-radius:16px;background:#fff;color:#222;border:2px solid #00ff99;box-shadow:0 0 8px #00ff99;cursor:pointer;transition:all 0.2s;';
-  btn.onclick = () => {
-    const next = !isLightMode();
-    setLightMode(next);
-    btn.textContent = next ? '🌙 ダークモード' : '☀ ライトモード';
-  };
-  document.body.appendChild(btn);
-}
-
-function isLightMode() {
-  return document.body.classList.contains('light-mode');
-}
-function setLightMode(on) {
-  if(on) document.body.classList.add('light-mode');
-  else document.body.classList.remove('light-mode');
-}
-// ページロード時に切替ボタン設置
-window.addEventListener('DOMContentLoaded',()=>{
-  setupColorModeToggle();
-});
 
 // Q1～Q4回答後におすすめクラスをランキング下に表示
 async function renderClassRecommendationAreaByProfile(profile) {
@@ -40,18 +12,22 @@ async function renderClassRecommendationAreaByProfile(profile) {
   }
   const lines = csv.split(/\r?\n/).filter(l=>l.trim());
   // 属性一致数でスコア付け＋最大一致数からおすすめ度(%)算出
+  // 前処理: profile値を小文字・trim・全角→半角変換
+  const norm = v => v ? v.toString().trim().toLowerCase().replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)) : '';
+  const normProfile = profile.map(norm);
   const results = lines.map(line=>{
     const cols = line.split(',');
     if(cols.length<7) return null;
-    const attrs = cols.slice(3,7);
+    // 属性値も正規化
+    const attrs = cols.slice(3,7).map(norm);
     let score = 0;
     let highlight = [0,0,0,0];
-    profile.forEach((ans,idx)=>{
+    normProfile.forEach((ans,idx)=>{
       attrs.forEach((attr,aid)=>{
         if(ans===attr) { score++; highlight[aid]++; }
       });
     });
-    return { code:cols[0], className:cols[1], teacher:cols[2], attrs, score, highlight };
+    return { code:cols[0], className:cols[1], teacher:cols[2], attrs: cols.slice(3,7), score, highlight };
   }).filter(Boolean);
   // 最大スコアを基準におすすめ度%を算出
   const maxScore = Math.max(...results.map(r=>r.score), 1);
