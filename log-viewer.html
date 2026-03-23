@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Prompt Log Viewer</title>
+  <style>
+    body { background:#0d1117; color:#c9d1d9; font-family:monospace; padding:2em; }
+    h1 { color:#58a6ff; font-size:1.3em; margin-bottom:0.3em; }
+    .meta { color:#8b949e; font-size:0.85em; margin-bottom:1.5em; }
+    .controls { display:flex; gap:0.8em; margin-bottom:1.5em; flex-wrap:wrap; }
+    button { padding:0.45em 1.1em; border-radius:6px; border:none; cursor:pointer; font-size:0.9em; font-family:monospace; }
+    .btn-dl    { background:#238636; color:#fff; }
+    .btn-clear { background:#6e2020; color:#ffaaaa; }
+    .btn-ref   { background:#1f2d3d; color:#58a6ff; border:1px solid #30363d; }
+    #log-count { color:#8b949e; font-size:0.88em; align-self:center; }
+    #filter    { background:#161b22; color:#c9d1d9; border:1px solid #30363d; border-radius:6px; padding:0.4em 0.8em; font-size:0.88em; font-family:monospace; width:280px; }
+    table { width:100%; border-collapse:collapse; font-size:0.8em; }
+    th { background:#161b22; color:#58a6ff; padding:0.5em 0.7em; text-align:left; border-bottom:1px solid #30363d; position:sticky; top:0; }
+    td { padding:0.45em 0.7em; border-bottom:1px solid #21262d; vertical-align:top; white-space:pre-wrap; word-break:break-all; }
+    tr:hover td { background:#161b22; }
+    .tag { display:inline-block; background:#0d2040; border:1px solid #30363d; border-radius:4px; padding:0.1em 0.4em; margin:0.1em; font-size:0.85em; }
+    #no-log { color:#8b949e; text-align:center; padding:3em; }
+  </style>
+</head>
+<body>
+  <h1>AI Prompt Log Viewer</h1>
+  <div class="meta">このページはメインアプリからリンクされていません。URLを直接入力した場合のみアクセスできます。</div>
+
+  <div class="controls">
+    <button class="btn-dl"    onclick="downloadLog()">JSONダウンロード</button>
+    <button class="btn-clear" onclick="clearLog()">ログ削除</button>
+    <button class="btn-ref"   onclick="renderTable()">更新</button>
+    <input  id="filter" type="text" placeholder="キーワードで絞り込み..." oninput="renderTable()">
+    <span   id="log-count"></span>
+  </div>
+
+  <div id="table-area"></div>
+
+  <script src="logger.js"></script>
+  <script>
+    function renderTable() {
+      const logs = AppLogger.load();
+      const keyword = document.getElementById('filter').value.trim().toLowerCase();
+      const filtered = keyword
+        ? logs.filter(l => JSON.stringify(l).toLowerCase().includes(keyword))
+        : logs;
+
+      document.getElementById('log-count').textContent =
+        `全 ${logs.length} 件 / 表示 ${filtered.length} 件`;
+
+      const area = document.getElementById('table-area');
+      if (filtered.length === 0) {
+        area.innerHTML = '<div id="no-log">ログがありません。</div>';
+        return;
+      }
+
+      // 降順表示（新しいものが上）
+      const rows = [...filtered].reverse().map((l, i) => {
+        const answers = l.answers || {};
+        const q1 = (answers.q1 || []).map(k => `<span class="tag">${k}</span>`).join('');
+        const q2 = (answers.q2 || []).map(k => `<span class="tag">${k}</span>`).join('');
+        const q3 = (answers.q3 || []).map(k => `<span class="tag">${k}</span>`).join('');
+        const q4 = (answers.q4 || []).map(k => `<span class="tag">${k}</span>`).join('') || '<span style="color:#555">なし</span>';
+        return `<tr>
+          <td style="white-space:nowrap;color:#8b949e;">${(l.timestamp||'').replace('T',' ').slice(0,19)}</td>
+          <td><b>Q1</b> ${q1}<br><b>Q2</b> ${q2}<br><b>Q3</b> ${q3}<br><b>Q4</b> ${q4}</td>
+          <td style="font-size:0.78em;color:#8b949e;">${(l.dpRate||'').replace(/,\s*/g,'\n')}</td>
+          <td style="font-size:0.78em;color:#8b949e;">${(l.specialty||'').replace(/,\s*/g,'\n')}</td>
+          <td style="font-size:0.72em;color:#555;max-width:220px;">${(l.browser||'').slice(0,80)}…</td>
+        </tr>`;
+      }).join('');
+
+      area.innerHTML = `<table>
+        <thead><tr>
+          <th>日時</th><th>選択内容</th><th>DP獲得率</th><th>専門性・領域</th><th>ブラウザ</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    }
+
+    function downloadLog() {
+      const logs = AppLogger.load();
+      if (logs.length === 0) { alert('ログがありません。'); return; }
+      AppLogger.download();
+    }
+
+    function clearLog() {
+      if (!confirm(`ログを全${AppLogger.count()}件削除します。よろしいですか？`)) return;
+      AppLogger.clear();
+      renderTable();
+    }
+
+    renderTable();
+  </script>
+</body>
+</html>
