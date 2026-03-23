@@ -21,6 +21,11 @@ async function renderClassRecommendationAreaByProfile(profile) {
     return;
   }
   const lines = csv.split(/\r?\n/).filter(l=>l.trim());
+  // BOM除去（UTF-8 BOMが付いている場合）
+  if (lines.length > 0 && lines[0].charCodeAt(0) === 0xFEFF) {
+    lines[0] = lines[0].slice(1);
+  }
+  console.log('[DEBUG CSV] lines.length:', lines.length, '/ 1行目raw:', JSON.stringify(lines[0]));
   // 属性一致数でスコア付け＋最大一致数からおすすめ度(%)算出
   // 前処理: profile値を小文字・trim・全角→半角変換
   const norm = v => v ? v.toString().trim().toLowerCase().replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)) : '';
@@ -45,7 +50,7 @@ async function renderClassRecommendationAreaByProfile(profile) {
   // ソート修正: b.score - a.score（元は b.score - b.score で常に0だったバグ）
   results.sort((a,b)=>b.score-a.score||b.highlight.reduce((s,v)=>s+v,0)-a.highlight.reduce((s,v)=>s+v,0));
   // デバッグ情報
-  const debugInfo = `[DEBUG] profile: ${JSON.stringify(profile)} / CSVヒット行数: ${results.length} / 上位5件スコア: ${results.slice(0,5).map(r=>r.score).join(',')}`;
+  const debugInfo = `[DEBUG] profile: ${JSON.stringify(profile)} / CSV行数: ${lines.length} / CSVヒット行数: ${results.length} / 上位5件スコア: ${results.slice(0,5).map(r=>r.score).join(',')}`;
   console.log(debugInfo);
   const top5 = results.slice(0,5);
   let html = '';
