@@ -210,7 +210,7 @@ function showMainApp() {
     </section>
     <section id="ai-analysis-section">
       <h2>履修ナビ一言アドバイス</h2>
-      <button id="ai-analysis-start-btn" class="cyberpunk-btn" style="margin-bottom:1em;">アドバイスを聴く</button>
+      <button id="ai-analysis-start-btn" class="cyberpunk-btn" style="margin-bottom:1em;">アドバイスを聞く</button>
       <div id="ai-analysis-result">${aiAnalysisResult}</div>
     </section>
     <section id="selected-courses-section">
@@ -1245,8 +1245,16 @@ async function renderAIAnalysis() {
   const fieldRate = data.fieldLabels.map((label, i) => `${label}: ${data.fieldData[i]}`).join(', ');
   const domainRate = data.domainLabels.map((label, i) => `${label}: ${data.domainData[i]}`).join(', ');
   const specialty = `フィールド: ${fieldRate}\n分野: ${domainRate}`;
-  // プロンプト生成
-  const prompt = `あなたは、音楽・舞台・エンタメ業界に詳しい熱心なアドバイザーです。元気で丁寧、明るく親身な口調で、今まさに進路を考え始めた10代の学生に分かりやすい言葉で話しかけてください。難しい言葉や堅苦しい表現は使わず、読んで気分が上がるようなチアフルなアドバイスをお願いします。\n\n【重要な制約】\n・必ず日本語のみで出力すること。中国語・韓国語・英語など日本語以外の文字を一切使用しないこと。\n・Markdown記号（#・*・-・\`など）は一切使わないこと。\n・各項は200字以内。\n・職業名は日本国内で実際に広く知られているものだけを挙げること。架空・誇張・曖昧な職種は絶対に含めないこと。\n\nこの学科は音楽業界・舞台（ミュージカル・ダンス・オペラ）・エンタテインメント業界を強みとし、表現者・制作者・ビジネスパーソンの育成に特化しています。様々な専門性からなりたい自分を目指せるカリキュラムです。\n\nこの学生の履修計画は次の通りです。\n【DP獲得率】\n${dpRate}\n【履修の専門性と領域】\n${specialty}\n\n以下の（１）と（２）2つの見出し（テーマ）に限定してアドバイスしてね。\n\n（１）あなたの興味・関心を活かせる進路のヒント\n履修データをもとに、音楽・舞台・エンタメ業界で実際に存在する具体的な職業名を日本語で3つ以上挙げてね。たとえば「音楽プロデューサー」「コンサートPAエンジニア」「ミュージカル俳優」「舞台照明スタッフ」「イベントプランナー」「レコード会社A&R担当」「劇場スタッフ」「劇団四季など劇団の俳優」などの中から、この学生の履修内容に合う職業を選んで、その理由を明るく伝えてね！\n\n（２）学生生活を充実させるには？\n「こんな事やってみて！」という心設けのよいトーンで、大学生活で意識すべき取り組みや、学外で補えるスキルを具体的にかつ明るく伝えてね。「あなたならできる！」と思えるようなメッセージにしてね！`;
+  // Q1～Q4の選択内容をラベル化してプロンプトに含める
+  const q1Map = {pops:'ポピュラー音楽',classic:'クラシック音楽',sound:'サウンドエンジニアリング',dance:'ダンス・身体表現',act:'演劇・声優',vocal:'オペラ・ミュージカル・声楽',entertainment:'エンタメ・総合芸術',it:'IT・先端技術'};
+  const q2Map = {create:'クリエイト・制作・ものづくり',performance:'パフォーマンス・演奏・舞台',business:'ビジネス・チームワーク'};
+  const q4Map = {keyboard:'キーボード・ピアノ',brass:'管楽器・パーカッション',ensemble:'バンドアンサンブル',vocal:'声楽・オペラ・ミュージカル'};
+  const q1Text = (userAnswers.q1||[]).map(k=>q1Map[k]||k).join('、') || 'なし';
+  const q2Text = (userAnswers.q2||[]).map(k=>q2Map[k]||k).join('、') || 'なし';
+  const q3Text = (userAnswers.q3||[]).map(k=>dpLabels[k]||k).join('、') || 'なし';
+  const q4Text = (userAnswers.q4||[]).map(k=>q4Map[k]||k).join('、') || 'なし';
+  // プロンプト生成（シンプル版）
+  const prompt = `日本語だけで返答してください。Markdownは使わないでください。\n\n音楽・舞台・エンタメ系の専門学校に通う学生へ、明るくフレンドリーな口調でアドバイスをお願いします。\n\n【学生の興味・関心】\n・興味のある分野：${q1Text}\n・やりたいこと：${q2Text}\n・身につけたい力：${q3Text}\n・演奏したい楽器：${q4Text}\n\n【履修データ】\n・DP獲得率：${dpRate}\n・専門性と領域：${specialty}\n\n以下の2点を200字以内でそれぞれ答えてください。\n\n（１）この学生に向いていそうな職業や進路を、具体的な職業名で3つ提案してください。理由も一言添えてください。\n\n（２）大学生活や学外でやっておくと良いことを1〜2つ、明るく具体的に伝えてください。`;
   // API送信
   const resultDiv = document.getElementById('ai-analysis-result');
   resultDiv.innerHTML = '<div style="color:#00bfff;">アドバイスを考えているよ！ちょっと待ってね✨</div>';
