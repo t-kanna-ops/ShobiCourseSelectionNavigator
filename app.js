@@ -6,8 +6,18 @@ async function renderClassRecommendationAreaByProfile(profile) {
   let csv = '';
   try {
     const res = await fetch('class.csv');
+    if (!res.ok) throw new Error(`class.csv の取得に失敗しました (HTTP ${res.status})`);
     csv = await res.text();
   } catch(e) {
+    // エラーをUIに表示してデバッグを容易にする
+    const rankingSection = document.getElementById('ranking-section');
+    if (rankingSection) {
+      const errArea = document.createElement('div');
+      errArea.id = 'class-recommend-area';
+      errArea.style = 'margin:2em 0;padding:1.5em;background:#222;color:#ff6666;border-radius:16px;box-shadow:0 0 16px #ff6666;max-width:700px;';
+      errArea.innerHTML = `<div style='font-size:1.1em;font-weight:bold;'>基礎演習クラス取得エラー</div><div style='margin-top:0.5em;font-size:0.95em;'>${e.message}</div>`;
+      rankingSection.insertAdjacentElement('afterend', errArea);
+    }
     return;
   }
   const lines = csv.split(/\r?\n/).filter(l=>l.trim());
@@ -32,7 +42,8 @@ async function renderClassRecommendationAreaByProfile(profile) {
   // 最大スコアを基準におすすめ度%を算出
   const maxScore = Math.max(...results.map(r=>r.score), 1);
   results.forEach(r=>{ r.percent = Math.round((r.score / maxScore) * 100); });
-  results.sort((a,b)=>b.score-b.score||b.highlight.reduce((s,v)=>s+v,0)-a.highlight.reduce((s,v)=>s+v,0));
+  // ソート修正: b.score - a.score（元は b.score - b.score で常に0だったバグ）
+  results.sort((a,b)=>b.score-a.score||b.highlight.reduce((s,v)=>s+v,0)-a.highlight.reduce((s,v)=>s+v,0));
   const html = results.slice(0,5).map((r,idx)=>{
     const attrHtml = r.attrs.map((attr,idx2)=>'<span style="'+(r.highlight[idx2]>0?`font-weight:bold;color:#ffe066;filter:drop-shadow(0 0 4px #ffe066);`.repeat(r.highlight[idx2]):'')+'">'+attr+'</span>').join(' / ');
     return `<div style='margin-bottom:1.2em;padding:1em 1.2em;background:#333;border-radius:10px;box-shadow:0 0 8px #00ff99;'>
@@ -191,8 +202,23 @@ function showMainApp() {
   // おすすめ科目自動選択ボタンのonclick再設定
   const autoBtn = document.getElementById("auto-select-btn");
   if (autoBtn) {
+    // おすすめ自動選択で追加したIDを記憶する
+    let autoSelectedIds = [];
     autoBtn.onclick = () => {
-      // 100単位分おすすめ科目をselectedCoursesに反映
+      // 「おすすめ科目自動解除」モード：自動選択した科目を全解除
+      if (autoBtn.dataset.autoSelected === "1") {
+        selectedCourses = selectedCourses.filter(id => !autoSelectedIds.includes(id));
+        autoSelectedIds = [];
+        autoBtn.dataset.autoSelected = "0";
+        autoBtn.textContent = "おすすめ科目自動選択";
+        renderCourseList();
+        renderCharts();
+        renderPieCharts();
+        renderSelectedCoursesList();
+        updateSelectedCreditInfo();
+        return;
+      }
+      // 「おすすめ科目自動選択」モード：100単位分おすすめ科目をselectedCoursesに反映
       const recommended = courseData
         .filter(c => c.isRecommended)
         .sort((a, b) => b._recommendPercent - a._recommendPercent);
@@ -201,10 +227,12 @@ function showMainApp() {
         return c ? sum + c.credits : sum;
       }, 0);
       selectedCourses = [...requiredCourseIds]; // 必修は常に選択
+      autoSelectedIds = [];
       let pool = [...recommended];
       for (const c of pool) {
         if (!selectedCourses.includes(c.id) && totalCredits + c.credits <= 100) {
           selectedCourses.push(c.id);
+          autoSelectedIds.push(c.id);
           totalCredits += c.credits;
         }
       }
@@ -217,11 +245,14 @@ function showMainApp() {
           const c = courseData.find(x => x.id === removeId);
           if (c) {
             selectedCourses = selectedCourses.filter(id => id !== removeId);
+            autoSelectedIds = autoSelectedIds.filter(id => id !== removeId);
             over -= c.credits;
             removable.splice(idx, 1);
           }
         }
       }
+      autoBtn.dataset.autoSelected = "1";
+      autoBtn.textContent = "おすすめ科目自動解除";
       renderCourseList();
       renderCharts();
       renderPieCharts();
@@ -654,7 +685,7 @@ function renderCharts() {
             color: 'transparent',
             display: false
           },
-          angleLines: { color: '#00bfff' },
+          angleLines: { color: labelColors },
           grid: { color: '#181f2b' },
           pointLabels: {
             font: { size: 13 },
@@ -856,14 +887,33 @@ function createCourseCard(course, selectable, showBadge) {
     row.appendChild(req);
     // 選択ボタンは絶対に生成しない
   } else if (selectable) {
-    // すべて概要ボタン
+    // ボタン縦並びコンテナ
+    const btnWrap = document.createElement("div");
+    btnWrap.className = "course-btn-wrap";
+    // 概要ボタン
     const btn = document.createElement("button");
     btn.textContent = "概要";
     btn.className = "course-summary-btn";
     btn.onclick = () => {
       showSyllabusFloatWindow(course);
     };
-    row.appendChild(btn);
+    btnWrap.appendChild(btn);
+    // 選択フラグが立っている科目には「解除」ボタンを表示
+    if (selectedCourses.includes(course.id)) {
+      const cancelBtn = document.createElement("button");
+      cancelBtn.textContent = "解除";
+      cancelBtn.className = "course-cancel-btn";
+      cancelBtn.onclick = () => {
+        selectedCourses = selectedCourses.filter(id => id !== course.id);
+        renderCourseList();
+        renderCharts();
+        renderPieCharts();
+        renderSelectedCoursesList();
+        updateSelectedCreditInfo();
+      };
+      btnWrap.appendChild(cancelBtn);
+    }
+    row.appendChild(btnWrap);
   }
   // シラバスフロートウィンドウ表示関数（kamoku.csv参照）
   async function showSyllabusFloatWindow(course) {
@@ -929,6 +979,27 @@ function createCourseCard(course, selectable, showBadge) {
   credits.textContent = `${course.credits} 単位`;
   info.appendChild(credits);
   row.appendChild(info);
+  // DP情報列（右側）
+  const dpObj = course.dp || {};
+  const mainDPs = Object.entries(dpObj).filter(([, v]) => v === 2).map(([k]) => k);
+  const subDPs  = Object.entries(dpObj).filter(([, v]) => v === 1).map(([k]) => k);
+  if (mainDPs.length > 0 || subDPs.length > 0) {
+    const dpCol = document.createElement("div");
+    dpCol.className = "course-dp-col";
+    if (mainDPs.length > 0) {
+      const mainRow = document.createElement("div");
+      mainRow.className = "course-dp-main";
+      mainRow.textContent = "主DP：" + mainDPs.join(" / ");
+      dpCol.appendChild(mainRow);
+    }
+    if (subDPs.length > 0) {
+      const subRow = document.createElement("div");
+      subRow.className = "course-dp-sub";
+      subRow.textContent = "副DP：" + subDPs.join(" / ");
+      dpCol.appendChild(subRow);
+    }
+    row.appendChild(dpCol);
+  }
   card.appendChild(row);
   // おすすめバッジ＋おすすめ度（縦並び）
   if (showBadge && course.isRecommended) {

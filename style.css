@@ -50,12 +50,68 @@
 /* 科目カード新レイアウト */
 .course-row {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
 }
 .course-select-btn {
   margin-right: 1em;
   min-width: 80px;
   font-size: 1em;
+}
+/* 概要ボタン・解除ボタンの縦並びコンテナ */
+.course-btn-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4em;
+  margin-right: 1em;
+  min-width: 80px;
+}
+/* 解除ボタン */
+.course-cancel-btn {
+  font-size: 0.95em;
+  padding: 0.3em 0.7em;
+  border-radius: 6px;
+  border: 1.5px solid #e74c3c;
+  background: #7b1c1c;
+  color: #ffaaaa;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 5px #e74c3c88;
+}
+.course-cancel-btn:hover {
+  background: #e74c3c;
+  color: #fff;
+  box-shadow: 0 0 10px #e74c3c;
+}
+/* DP情報列 */
+.course-dp-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 160px;
+  max-width: 220px;
+  margin-left: 16px;
+  margin-right: 0.8em;
+  gap: 0.3em;
+}
+.course-dp-main {
+  font-size: 0.78em;
+  color: #ffe066;
+  line-height: 1.4;
+  word-break: break-all;
+}
+.course-dp-sub {
+  font-size: 0.72em;
+  color: #aad4ff;
+  line-height: 1.4;
+  word-break: break-all;
+}
+body.light-mode .course-dp-main {
+  color: #7a5c00;
+}
+body.light-mode .course-dp-sub {
+  color: #005080;
 }
 .course-info {
   display: flex;
