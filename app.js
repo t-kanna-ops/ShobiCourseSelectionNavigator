@@ -209,8 +209,8 @@ function showMainApp() {
       <button id="auto-select-btn" class="cyberpunk-btn" style="margin-top:1em;">おすすめ科目自動選択</button>
     </section>
     <section id="ai-analysis-section">
-      <h2>履修バランスのAI分析</h2>
-      <button id="ai-analysis-start-btn" class="cyberpunk-btn" style="margin-bottom:1em;">AI分析スタート</button>
+      <h2>履修ナビ一言アドバイス</h2>
+      <button id="ai-analysis-start-btn" class="cyberpunk-btn" style="margin-bottom:1em;">アドバイスを聴く</button>
       <div id="ai-analysis-result">${aiAnalysisResult}</div>
     </section>
     <section id="selected-courses-section">
@@ -1205,7 +1205,7 @@ function showFloatMenu() {
     { id: 'ranking-section', label: 'おすすめランキング' },
     { id: 'simulation-section', label: '履修シミュレーション' },
     { id: 'summary-section', label: '履修バランス' },
-    { id: 'ai-analysis-section', label: '履修バランスのAI分析' },
+    { id: 'ai-analysis-section', label: '履修ナビ一言アドバイス' },
     { id: 'selected-courses-section', label: '選択科目一覧' }
   ];
   sections.forEach(sec => {
@@ -1246,10 +1246,10 @@ async function renderAIAnalysis() {
   const domainRate = data.domainLabels.map((label, i) => `${label}: ${data.domainData[i]}`).join(', ');
   const specialty = `フィールド: ${fieldRate}\n分野: ${domainRate}`;
   // プロンプト生成
-  const prompt = `この「履修モデル」で得られる能力や専門性をですます調かつ推測口調で解説してください。\n各項150字以内。主語は用いない。Markdown記号を使用しない。\n\n【学科の特性・強み】\n音楽業界、舞台（ミュージカル・ダンス・オペラ）、演奏者、サウンドクリエイター、音楽・舞台系ビジネス、エンタテインメントビジネスの各分野を強みとする学科であり、これらの業界への就職・活躍を主眼に置いたカリキュラムを持つ。提案する進路・職業はこの学科特性を最大限に活かせるものを優先すること。\n\n【DP獲得率】\n${dpRate}\n【専門性と履修領域】\n${specialty}\n\n以下の2構成で出力してください。\n\n1. 専門領域と進路の可能性\n専門性(パフォーマンス・クリエイト・ビジネス)と履修領域（音楽・舞台・エンタメ・情報）の双方を参考に、進路として推奨される業界について提案し、具体的かつ一般的に知名度の高い職業名を3つ以上、理由付きで提案せよ。\n\n2. 学習や大学生活へのアドバイス\n推奨する業界および進路を踏まえて、大学生活で意識すべき取り組みや、学外で補うべきスキルについて助言せよ。`;
+  const prompt = `あなたは、音楽・舞台・エンタメ業界に詳しい熱心なアドバイザーです。元気で丁寧、明るく親身な口調で、今まさに進路を考え始めた10代の学生に分かりやすい言葉で話しかけてください。難しい言葉や堅苦しい表現は使わず、読んで気分が上がるようなチアフルなアドバイスをお願いします。各項は200字以内。Markdown記号は一切使わない。\n\nこの学科は音楽業界・舞台（ミュージカル・ダンス・オペラ）・演奏者・サウンドクリエイター・音楽舞台系ビジネス・エンタテインメントビジネスを強みとしています。演奏・創作・ビジネスどのコースからでもなりたい自分を目指せるカリキュラムです。\n\nこの学生の履修データは次の通りです。\n【DP獲得率】\n${dpRate}\n【履修の専門性と領域】\n${specialty}\n\n以下の2つのテーマでアドバイスしてね。\n\n1. 才能を活かせる進路のヒント\n「こんなお仕事や業界が向いてるかも！」と言いたくなるような気持ちで、知名度の高い職業名を具体的に3つ以上挙げ、「この学生ならここが向いてるよ」と感じられる理由をはっきり気持ち良く伝える。\n\n2. 学生生活を充実させるこつこつアドバイス\n「こんな事やってみて！」という心設けのよいトーンで、大学生活で意識すべき取り組みや、学外で補えるスキルを具体的にかつ明るく伝える。「あなたならできる！」と思えるようなメッセージにする。`;
   // API送信
   const resultDiv = document.getElementById('ai-analysis-result');
-  resultDiv.innerHTML = '<div style="color:#00bfff;">AI分析中...</div>';
+  resultDiv.innerHTML = '<div style="color:#00bfff;">アドバイスを考えているよ！ちょっと待ってね✨</div>';
   try {
     const res = await fetch("https://test001-ten-steel.vercel.app/api/chat", {
       method: "POST",
