@@ -25,45 +25,36 @@ async function renderClassRecommendationAreaByProfile(profile) {
   if (lines.length > 0 && lines[0].charCodeAt(0) === 0xFEFF) {
     lines[0] = lines[0].slice(1);
   }
-  console.log('[DEBUG CSV] lines.length:', lines.length, '/ 1行目raw:', JSON.stringify(lines[0]));
-  // 属性一致数でスコア付け＋最大一致数からおすすめ度(%)算出
-  // 前処理: profile値を小文字・trim・全角→半角変換
+  // 正規化関数（全角→半角・小文字化）
   const norm = v => v ? v.toString().trim().toLowerCase().replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)) : '';
-  const normProfile = profile.map(norm);
+  // profile は [{key, weight}] の重み付き配列
   const results = lines.map(line=>{
     const cols = line.split(',');
     if(cols.length<7) return null;
-    // 属性値も正規化
     const attrs = cols.slice(3,7).map(norm);
     let score = 0;
-    let highlight = [0,0,0,0];
-    normProfile.forEach((ans,idx)=>{
-      attrs.forEach((attr,aid)=>{
-        if(ans===attr) { score++; highlight[aid]++; }
+    profile.forEach(({key, weight})=>{
+      const normKey = norm(key);
+      attrs.forEach(attr=>{
+        if(normKey === attr) score += weight;
       });
     });
-    return { code:cols[0], className:cols[1], teacher:cols[2], attrs: cols.slice(3,7), score, highlight };
+    return { code:cols[0], className:cols[1], teacher:cols[2], score };
   }).filter(Boolean);
-  // 最大スコアを基準におすすめ度%を算出
-  const maxScore = Math.max(...results.map(r=>r.score), 1);
+  // 最大スコアを基準にマッチ度%を算出
+  const maxScore = Math.max(...results.map(r=>r.score), 0.001);
   results.forEach(r=>{ r.percent = Math.round((r.score / maxScore) * 100); });
-  // ソート修正: b.score - a.score（元は b.score - b.score で常に0だったバグ）
-  results.sort((a,b)=>b.score-a.score||b.highlight.reduce((s,v)=>s+v,0)-a.highlight.reduce((s,v)=>s+v,0));
-  // デバッグ情報
-  const debugInfo = `[DEBUG] profile: ${JSON.stringify(profile)} / CSV行数: ${lines.length} / CSVヒット行数: ${results.length} / 上位5件スコア: ${results.slice(0,5).map(r=>r.score).join(',')}`;
-  console.log(debugInfo);
-  const top5 = results.slice(0,5);
+  results.sort((a,b)=>b.score-a.score);
+  const top5 = results.filter(r=>r.score>0).slice(0,5);
   let html = '';
   if (top5.length === 0) {
-    html = `<div style='color:#aaa;'>（マッチするクラスが見つかりませんでした）<br><small>${debugInfo}</small></div>`;
+    html = `<div style='color:#aaa;'>（マッチするクラスが見つかりませんでした）</div>`;
   } else {
     html = top5.map((r,idx)=>{
-      const attrHtml = r.attrs.map((attr,idx2)=>'<span style="'+(r.highlight[idx2]>0?'font-weight:bold;color:#ffe066;filter:drop-shadow(0 0 4px #ffe066);':'')+'">'+attr+'</span>').join(' / ');
       return `<div style='margin-bottom:1.2em;padding:1em 1.2em;background:#333;border-radius:10px;box-shadow:0 0 8px #00ff99;'>
         <div style='font-size:1.1em;font-weight:bold;'>${idx+1}位：${r.className}</div>
         <div>教員: <span style='color:#00ff99;'>${r.teacher}</span></div>
-        <div>属性: ${attrHtml}</div>
-        <div style='margin-top:0.5em;'><span style='color:#ffd700;font-weight:bold;'>おすすめ度 ${r.percent}%</span>　<a href='https://cps-portal.shobi-u.ac.jp/cpsmart/public/dashboard/main/ja/simple/1900/3000280/wsl/SyllabusSansho?kogiCd=${r.code}' target='_blank' style='color:#00bfff;text-decoration:underline;'>シラバスを見る</a></div>
+        <div style='margin-top:0.5em;'><span style='color:#ffd700;font-weight:bold;'>マッチ度 ${r.percent}%</span>　<a href='https://cps-portal.shobi-u.ac.jp/cpsmart/public/dashboard/main/ja/simple/1900/3000280/wsl/SyllabusSansho?kogiCd=${r.code}' target='_blank' style='color:#00bfff;text-decoration:underline;'>シラバスを見る</a></div>
       </div>`;
     }).join('');
   }
@@ -547,14 +538,22 @@ function showDiagnosisStep() {
       userAnswers.q4 = selectedQ4;
       diagnosisStep = 5;
       // Q1: domains, Q2: fields, Q3: dp, Q4: instrument
-      // fields/domains/instrument属性を優先的にprofile配列にまとめる
+      // 選択順（インデックス）に基づく重み付きプロファイルを生成
+      // 重み: 1位=1.0, 2位=0.8, 3位=0.6, 4位=0.4, 5位以降=0.2
+      const weightOf = idx => Math.max(1.0 - idx * 0.2, 0.2);
       const profile = [];
-      // Q1: domains
-      if (Array.isArray(userAnswers.q1)) profile.push(...userAnswers.q1);
-      // Q2: fields
-      if (Array.isArray(userAnswers.q2)) profile.push(...userAnswers.q2);
-      // Q4: instrument
-      if (Array.isArray(userAnswers.q4)) profile.push(...userAnswers.q4);
+      // Q1: domains（重み高め: ×1.0）
+      if (Array.isArray(userAnswers.q1)) {
+        userAnswers.q1.forEach((key, idx) => profile.push({ key, weight: weightOf(idx) * 1.0 }));
+      }
+      // Q2: fields（重み中: ×0.8）
+      if (Array.isArray(userAnswers.q2)) {
+        userAnswers.q2.forEach((key, idx) => profile.push({ key, weight: weightOf(idx) * 0.8 }));
+      }
+      // Q4: instrument（重み低め: ×0.6）
+      if (Array.isArray(userAnswers.q4)) {
+        userAnswers.q4.forEach((key, idx) => profile.push({ key, weight: weightOf(idx) * 0.6 }));
+      }
       // Q3はdpだがclass.csvには直接使わないので除外
       showMainApp();
       setTimeout(()=>renderClassRecommendationAreaByProfile(profile), 100);
