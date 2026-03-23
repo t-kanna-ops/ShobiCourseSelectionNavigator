@@ -1214,7 +1214,7 @@ async function renderAIAnalysis() {
   const domainRate = data.domainLabels.map((label, i) => `${label}: ${data.domainData[i]}`).join(', ');
   const specialty = `フィールド: ${fieldRate}\n分野: ${domainRate}`;
   // プロンプト生成
-  const prompt = `この「履修モデル」で得られる能力や専門性をですます調かつ推測口調で解説してください。\n各項100字以内。主語は用いない。Markdown記号を使用しない。\n\n【DP獲得率】\n${dpRate}\n【専門性と履修領域】\n${specialty}\n\n以下の4構成で出力してください。\n\n1. 専門性のバランスと特徴\n専門性(パフォーマンス・クリエイト・ビジネス)と履修領域（音楽・舞台・エンタメ・情報）の双方を組み合わせた専門家像について解説。\n\n2. DPから見る「養われる力」\n得られる能力と、意識して補うべき能力\n\n3. 目指せる将来の進路\n具体的かつ一般的に知名度の高い職業名を3つ以上(理由付き)。\n\n4. 学習のアドバイス\n大学生活で意識すべき取り組みや、学外で補うべきスキルの助言。`;
+  const prompt = `この「履修モデル」で得られる能力や専門性をですます調かつ推測口調で解説してください。\n各項150字以内。主語は用いない。Markdown記号を使用しない。\n\n【DP獲得率】\n${dpRate}\n【専門性と履修領域】\n${specialty}\n\n以下の2構成で出力してください。\n\n1. 専門領域と進路の可能性\n専門性(パフォーマンス・クリエイト・ビジネス)と履修領域（音楽・舞台・エンタメ・情報）の双方を参考に、進路として推奨される業界について提案し、具体的かつ一般的に知名度の高い職業名を3つ以上、理由付きで提案せよ。\n\n2. 学習や大学生活へのアドバイス\n推奨する業界および進路を踏まえて、大学生活で意識すべき取り組みや、学外で補うべきスキルについて助言せよ。`;
   // API送信
   const resultDiv = document.getElementById('ai-analysis-result');
   resultDiv.innerHTML = '<div style="color:#00bfff;">AI分析中...</div>';
