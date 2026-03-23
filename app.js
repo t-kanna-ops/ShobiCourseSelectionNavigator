@@ -538,21 +538,28 @@ function showDiagnosisStep() {
       userAnswers.q4 = selectedQ4;
       diagnosisStep = 5;
       // Q1: domains, Q2: fields, Q3: dp, Q4: instrument
-      // 選択順（インデックス）に基づく重み付きプロファイルを生成
-      // 重み: 1位=1.0, 2位=0.8, 3位=0.6, 4位=0.4, 5位以降=0.2
-      const weightOf = idx => Math.max(1.0 - idx * 0.2, 0.2);
+      // 選択順による個別重み配列
+      const q1Weights = [1.00, 0.50, 0.30, 0.20]; // 4番目以降は0.20固定
+      const q2Weights = [0.80, 0.32, 0.24];
+      const q4Weights = [1.20, 1.00];
       const profile = [];
-      // Q1: domains（重み高め: ×1.0）
+      // Q1: domains
       if (Array.isArray(userAnswers.q1)) {
-        userAnswers.q1.forEach((key, idx) => profile.push({ key, weight: weightOf(idx) * 1.0 }));
+        userAnswers.q1.forEach((key, idx) => {
+          profile.push({ key, weight: q1Weights[idx] ?? 0.20 });
+        });
       }
-      // Q2: fields（重み中: ×0.8）
+      // Q2: fields
       if (Array.isArray(userAnswers.q2)) {
-        userAnswers.q2.forEach((key, idx) => profile.push({ key, weight: weightOf(idx) * 0.8 }));
+        userAnswers.q2.forEach((key, idx) => {
+          if (q2Weights[idx] !== undefined) profile.push({ key, weight: q2Weights[idx] });
+        });
       }
-      // Q4: instrument（重み低め: ×0.6）
+      // Q4: instrument
       if (Array.isArray(userAnswers.q4)) {
-        userAnswers.q4.forEach((key, idx) => profile.push({ key, weight: weightOf(idx) * 0.6 }));
+        userAnswers.q4.forEach((key, idx) => {
+          if (q4Weights[idx] !== undefined) profile.push({ key, weight: q4Weights[idx] });
+        });
       }
       // Q3はdpだがclass.csvには直接使わないので除外
       showMainApp();
