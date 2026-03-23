@@ -493,9 +493,8 @@ function showDiagnosisStep() {
       <form id="q4-form">
         ${[
           {key: "keyboard", label: "キーボード・ピアノ"},
-          {key: "brass",    label: "吹奏楽器（管楽器・打楽器など）"},
-          {key: "ensemble", label: "アンサンブル（ドラム・ギター・ベースなど）"},
-          {key: "vocal",    label: "ボーカル・合唱"}
+          {key: "brass",    label: "吹奏楽器（管楽器・パーカッションなど）"},
+          {key: "ensemble", label: "バンドアンサンブル（ドラム・ギター・ベースなど）"}
         ].map(opt => `<button type="button" class="q4-select-btn" data-key="${opt.key}">${opt.label}</button><br>`).join('')}
       </form>
       <div id="q4-selected-list" style="margin:1em 0;"></div>
@@ -504,9 +503,8 @@ function showDiagnosisStep() {
     let selectedQ4 = [];
     const q4Options = [
       {key: "keyboard", label: "キーボード・ピアノ"},
-      {key: "brass",    label: "吹奏楽器（管楽器・打楽器など）"},
-      {key: "ensemble", label: "アンサンブル（ドラム・ギター・ベースなど）"},
-      {key: "vocal",    label: "ボーカル・合唱"}
+      {key: "brass",    label: "吹奏楽器（管楽器・パーカッションなど）"},
+      {key: "ensemble", label: "バンドアンサンブル（ドラム・ギター・ベースなど）"}
     ];
     const q4Btns = Array.from(document.querySelectorAll('.q4-select-btn'));
     const q4SelectedList = document.getElementById('q4-selected-list');
