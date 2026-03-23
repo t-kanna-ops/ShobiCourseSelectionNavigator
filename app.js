@@ -180,6 +180,10 @@ function showMainApp() {
     <div id="reference-area" style="margin-bottom:1em;">
       <button id="reference-btn" class="cyberpunk-btn" style="background:#00bfff;color:#fff;">参考資料：履修モデル一覧</button>
     </div>
+    <section id="your-answers-section" style="margin-bottom:1.5em;padding:1.2em 1.5em;background:#1a2233;border-radius:12px;border:1px solid #00bfff44;">
+      <h2 style="margin-bottom:0.8em;">あなたが選んだのは…</h2>
+      <div id="your-answers-list"></div>
+    </section>
     <section id="ranking-section">
       <h2>おすすめランキング</h2>
       <div id="ranking-list"></div>
@@ -215,6 +219,27 @@ function showMainApp() {
     </section>
   `;
   renderRanking();
+  // 選択内容の表示
+  (()=>{
+    const q1Labels = {pops:"ポピュラー音楽",classic:"クラシック音楽",sound:"サウンドエンジニアリング",dance:"ダンス・身体表現",act:"演劇・声優",vocal:"オペラ・ミュージカル・声楽",entertainment:"エンタメ・総合芸術",it:"IT・先端技術"};
+    const q2Labels = {create:"クリエイト・創作・制作・ものづくり",performance:"パフォーマンス・演奏・表現・舞台に立つ",business:"ビジネス・販売・チームワーク・誰かを支える"};
+    const q4Labels = {keyboard:"キーボード・ピアノ",brass:"吹奏楽器（管楽器・パーカッションなど）",ensemble:"バンドアンサンブル（ドラム・ギター・ベースなど）",vocal:"声楽（オペラ・ミュージカル）"};
+    const rows = [
+      { q:"Q1. 興味のある分野",   keys: userAnswers.q1 || [], map: q1Labels, ordered: true },
+      { q:"Q2. キーワード",        keys: userAnswers.q2 || [], map: q2Labels, ordered: true },
+      { q:"Q3. 身につけたい力",    keys: userAnswers.q3 || [], map: dpLabels,  ordered: true },
+      { q:"Q4. 演奏経験・楽器",   keys: userAnswers.q4 || [], map: q4Labels, ordered: false }
+    ];
+    const container = document.getElementById('your-answers-list');
+    if (container) {
+      container.innerHTML = rows.map(row => {
+        const items = row.keys.length
+          ? row.keys.map((k, i) => `<span style="display:inline-block;margin:0.2em 0.4em 0.2em 0;padding:0.2em 0.7em;background:#0d2040;border:1px solid #00bfff88;border-radius:6px;color:#e0f0ff;font-size:0.9em;">${row.ordered ? `${i+1}位: ` : ''}${row.map[k] || k}</span>`).join('')
+          : `<span style="color:#666;font-size:0.88em;">（未選択）</span>`;
+        return `<div style="margin-bottom:0.6em;"><span style="color:#00bfff;font-weight:bold;font-size:0.92em;margin-right:0.5em;">${row.q}</span>${items}</div>`;
+      }).join('');
+    }
+  })();
   renderCourseList();
   renderCharts();
   renderPieCharts();
