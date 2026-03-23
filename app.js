@@ -44,9 +44,9 @@ async function renderClassRecommendationAreaByProfile(profile) {
     });
     return { code:cols[0], className:cols[1], teacher:cols[2], score };
   }).filter(Boolean);
-  // 最大スコアを基準にマッチ度%を算出
-  const maxScore = Math.max(...results.map(r=>r.score), 0.001);
-  results.forEach(r=>{ r.percent = Math.round((r.score / maxScore) * 100); });
+  // スコアの絶対値の最大値を基準にマッチ度%を算出（負スコア時の巨大マイナス%を防ぐ）
+  const maxAbsScore = Math.max(...results.map(r => Math.abs(r.score)), 0.001);
+  results.forEach(r=>{ r.percent = Math.round((r.score / maxAbsScore) * 100); });
   results.sort((a,b)=>b.score-a.score);
   const top5 = results.slice(0,5);
   let html = '';
