@@ -67,13 +67,14 @@
           <td><b>Q1</b> ${q1}<br><b>Q2</b> ${q2}<br><b>Q3</b> ${q3}<br><b>Q4</b> ${q4}</td>
           <td style="font-size:0.78em;color:#8b949e;">${(l.dpRate||'').replace(/,\s*/g,'\n')}</td>
           <td style="font-size:0.78em;color:#8b949e;">${(l.specialty||'').replace(/,\s*/g,'\n')}</td>
+          <td style="font-size:0.82em;color:#c9d1d9;max-width:320px;">${l.aiReply || '<span style="color:#555">未取得</span>'}</td>
           <td style="font-size:0.72em;color:#555;max-width:220px;">${(l.browser||'').slice(0,80)}…</td>
         </tr>`;
       }).join('');
 
       area.innerHTML = `<table>
         <thead><tr>
-          <th>日時</th><th>選択内容</th><th>DP獲得率</th><th>専門性・領域</th><th>ブラウザ</th>
+          <th>日時</th><th>選択内容</th><th>DP獲得率</th><th>専門性・領域</th><th>AIコメント</th><th>ブラウザ</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
