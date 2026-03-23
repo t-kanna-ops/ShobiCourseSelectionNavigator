@@ -44,23 +44,37 @@ async function renderClassRecommendationAreaByProfile(profile) {
   results.forEach(r=>{ r.percent = Math.round((r.score / maxScore) * 100); });
   // ソート修正: b.score - a.score（元は b.score - b.score で常に0だったバグ）
   results.sort((a,b)=>b.score-a.score||b.highlight.reduce((s,v)=>s+v,0)-a.highlight.reduce((s,v)=>s+v,0));
-  const html = results.slice(0,5).map((r,idx)=>{
-    const attrHtml = r.attrs.map((attr,idx2)=>'<span style="'+(r.highlight[idx2]>0?`font-weight:bold;color:#ffe066;filter:drop-shadow(0 0 4px #ffe066);`.repeat(r.highlight[idx2]):'')+'">'+attr+'</span>').join(' / ');
-    return `<div style='margin-bottom:1.2em;padding:1em 1.2em;background:#333;border-radius:10px;box-shadow:0 0 8px #00ff99;'>
-      <div style='font-size:1.1em;font-weight:bold;'>${idx+1}位：${r.className}</div>
-      <div>教員: <span style='color:#00ff99;'>${r.teacher}</span></div>
-      <div>属性: ${attrHtml}</div>
-      <div style='margin-top:0.5em;'><span style='color:#ffd700;font-weight:bold;'>おすすめ度 ${r.percent}%</span>　<a href='https://cps-portal.shobi-u.ac.jp/cpsmart/public/dashboard/main/ja/simple/1900/3000280/wsl/SyllabusSansho?kogiCd=${r.code}' target='_blank' style='color:#00bfff;text-decoration:underline;'>シラバスを見る</a></div>
-    </div>`;
-  }).join('');
-  // ランキング下に挿入
+  // デバッグ情報
+  const debugInfo = `[DEBUG] profile: ${JSON.stringify(profile)} / CSVヒット行数: ${results.length} / 上位5件スコア: ${results.slice(0,5).map(r=>r.score).join(',')}`;
+  console.log(debugInfo);
+  const top5 = results.slice(0,5);
+  let html = '';
+  if (top5.length === 0) {
+    html = `<div style='color:#aaa;'>（マッチするクラスが見つかりませんでした）<br><small>${debugInfo}</small></div>`;
+  } else {
+    html = top5.map((r,idx)=>{
+      const attrHtml = r.attrs.map((attr,idx2)=>'<span style="'+(r.highlight[idx2]>0?'font-weight:bold;color:#ffe066;filter:drop-shadow(0 0 4px #ffe066);':'')+'">'+attr+'</span>').join(' / ');
+      return `<div style='margin-bottom:1.2em;padding:1em 1.2em;background:#333;border-radius:10px;box-shadow:0 0 8px #00ff99;'>
+        <div style='font-size:1.1em;font-weight:bold;'>${idx+1}位：${r.className}</div>
+        <div>教員: <span style='color:#00ff99;'>${r.teacher}</span></div>
+        <div>属性: ${attrHtml}</div>
+        <div style='margin-top:0.5em;'><span style='color:#ffd700;font-weight:bold;'>おすすめ度 ${r.percent}%</span>　<a href='https://cps-portal.shobi-u.ac.jp/cpsmart/public/dashboard/main/ja/simple/1900/3000280/wsl/SyllabusSansho?kogiCd=${r.code}' target='_blank' style='color:#00bfff;text-decoration:underline;'>シラバスを見る</a></div>
+      </div>`;
+    }).join('');
+  }
+  // ランキング下に挿入（なければ main-area 末尾に追加）
   const rankingSection = document.getElementById('ranking-section');
-  if (rankingSection) {
+  const insertTarget = rankingSection || document.getElementById('main-area');
+  if (insertTarget) {
     const area = document.createElement('div');
     area.id = 'class-recommend-area';
     area.style = 'margin:2em 0;padding:2em;background:#222;color:#fff;border-radius:16px;box-shadow:0 0 16px #00ff99;max-width:700px;';
     area.innerHTML = `<div style='font-size:1.3em;font-weight:bold;margin-bottom:1em;'>あなたにおすすめの基礎演習クラス</div><div id='class-recommend-result'>${html}</div>`;
-    rankingSection.insertAdjacentElement('afterend', area);
+    if (rankingSection) {
+      rankingSection.insertAdjacentElement('afterend', area);
+    } else {
+      insertTarget.appendChild(area);
+    }
   }
 }
 // データファイルのロード確認
