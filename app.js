@@ -33,13 +33,13 @@ async function renderClassRecommendationAreaByProfile(profile) {
     if(cols.length<7) return null;
     const attrs = cols.slice(3,7).map(norm);
     let score = 0;
-    profile.forEach(({key, weight})=>{
+    profile.forEach(({key, weight, q})=>{
       const normKey = norm(key);
       const matched = attrs.some(attr => normKey === attr);
       if (matched) {
-        score += weight;  // 一致：加点
-      } else {
-        score -= weight;  // 非一致：同重みでマイナス補正
+        score += weight;       // 一致：加点（全Q共通）
+      } else if (q !== 'q2') {
+        score -= weight;       // 非一致：Q1/Q4のみマイナス補正、Q2はペナルティなし
       }
     });
     return { code:cols[0], className:cols[1], teacher:cols[2], score };
@@ -544,24 +544,24 @@ function showDiagnosisStep() {
       // 選択順による個別重み配列
       const q1Weights = [1.00, 0.50, 0.30, 0.20]; // 4番目以降は0.20固定
       const q2Weights = [0.80, 0.32, 0.24];
-      const q4Weights = [1.20, 1.00];
+      const q4Weights = [2.00, 1.00];
       const profile = [];
       // Q1: domains
       if (Array.isArray(userAnswers.q1)) {
         userAnswers.q1.forEach((key, idx) => {
-          profile.push({ key, weight: q1Weights[idx] ?? 0.20 });
+          profile.push({ key, weight: q1Weights[idx] ?? 0.20, q: 'q1' });
         });
       }
-      // Q2: fields
+      // Q2: fields（マイナス補正なし）
       if (Array.isArray(userAnswers.q2)) {
         userAnswers.q2.forEach((key, idx) => {
-          if (q2Weights[idx] !== undefined) profile.push({ key, weight: q2Weights[idx] });
+          if (q2Weights[idx] !== undefined) profile.push({ key, weight: q2Weights[idx], q: 'q2' });
         });
       }
       // Q4: instrument
       if (Array.isArray(userAnswers.q4)) {
         userAnswers.q4.forEach((key, idx) => {
-          if (q4Weights[idx] !== undefined) profile.push({ key, weight: q4Weights[idx] });
+          if (q4Weights[idx] !== undefined) profile.push({ key, weight: q4Weights[idx], q: 'q4' });
         });
       }
       // Q3はdpだがclass.csvには直接使わないので除外
