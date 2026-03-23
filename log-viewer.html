@@ -39,6 +39,13 @@
 
   <script src="logger.js"></script>
   <script>
+    function toJST(isoStr) {
+      if (!isoStr) return '';
+      const d = new Date(isoStr);
+      return d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false })
+               .replace(/\//g, '-');
+    }
+
     function renderTable() {
       const logs = AppLogger.load();
       const keyword = document.getElementById('filter').value.trim().toLowerCase();
@@ -63,7 +70,7 @@
         const q3 = (answers.q3 || []).map(k => `<span class="tag">${k}</span>`).join('');
         const q4 = (answers.q4 || []).map(k => `<span class="tag">${k}</span>`).join('') || '<span style="color:#555">なし</span>';
         return `<tr>
-          <td style="white-space:nowrap;color:#8b949e;">${(l.timestamp||'').replace('T',' ').slice(0,19)}</td>
+          <td style="white-space:nowrap;color:#8b949e;">${toJST(l.timestamp)}</td>
           <td><b>Q1</b> ${q1}<br><b>Q2</b> ${q2}<br><b>Q3</b> ${q3}<br><b>Q4</b> ${q4}</td>
           <td style="font-size:0.78em;color:#8b949e;">${(l.dpRate||'').replace(/,\s*/g,'\n')}</td>
           <td style="font-size:0.78em;color:#8b949e;">${(l.specialty||'').replace(/,\s*/g,'\n')}</td>
