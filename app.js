@@ -1247,20 +1247,6 @@ async function renderAIAnalysis() {
   const specialty = `フィールド: ${fieldRate}\n分野: ${domainRate}`;
   // プロンプト生成
   const prompt = `あなたは、音楽・舞台・エンタメ業界に詳しい熱心なアドバイザーです。元気で丁寧、明るく親身な口調で、今まさに進路を考え始めた10代の学生に分かりやすい言葉で話しかけてください。難しい言葉や堅苦しい表現は使わず、読んで気分が上がるようなチアフルなアドバイスをお願いします。各項は150字以内。Markdown記号は一切使わない。\n\nこの学科は音楽業界・舞台（ミュージカル・ダンス・オペラ）関係・エンタテインメント業界を強みとし、表現者・制作者・ビジネスマンの育成に特化しています。様々な専門性からなりたい自分を目指せるカリキュラムです。\n\nこの学生の履修計画は次の通りです。\n【DP獲得率】\n${dpRate}\n【履修の専門性と領域】\n${specialty}\n\n以下の2つのテーマに限定してアドバイスしてね。\n\n1. あなたの興味・関心を活かせる進路のヒント\n「こんなお仕事や業界が向いてるかも！」と言いたくなるような気持ちで、知名度の高い職業名を具体的に3つ以上挙げ、「この履修計画ならこの職業が向いてるよ」と感じられる理由をはっきり気持ち良く伝える。\n\n2. 学生生活を充実させるには？\n「こんな事やってみて！」という心設けのよいトーンで、大学生活で意識すべき取り組みや、学外で補えるスキルを具体的にかつ明るく伝える。「あなたならできる！」と思えるようなメッセージにする。`;
-  // ログ保存（送信前に記録）
-  if (typeof AppLogger !== 'undefined') {
-    AppLogger.write({
-      event:      'ai_prompt_sent',
-      answers:    {
-        q1: userAnswers.q1 || [],
-        q2: userAnswers.q2 || [],
-        q3: userAnswers.q3 || [],
-        q4: userAnswers.q4 || []
-      },
-      dpRate:     dpRate,
-      specialty:  specialty
-    });
-  }
   // API送信
   const resultDiv = document.getElementById('ai-analysis-result');
   resultDiv.innerHTML = '<div style="color:#00bfff;">アドバイスを考えているよ！ちょっと待ってね✨</div>';
@@ -1274,6 +1260,21 @@ async function renderAIAnalysis() {
     // APIリターンは data.reply で受ける
     if (data.reply) {
       resultDiv.innerHTML = `<div style='white-space:pre-line;'>${data.reply}</div>`;
+      // ログ保存（レスポンス受信時に記録）
+      if (typeof AppLogger !== 'undefined') {
+        AppLogger.write({
+          event:     'ai_response_received',
+          answers:   {
+            q1: userAnswers.q1 || [],
+            q2: userAnswers.q2 || [],
+            q3: userAnswers.q3 || [],
+            q4: userAnswers.q4 || []
+          },
+          dpRate:    dpRate,
+          specialty: specialty,
+          aiReply:   data.reply
+        });
+      }
     } else {
       resultDiv.innerHTML = `<div style='color:red;'>AI分析の取得に失敗しました。${data.error ? `<br>${data.error}` : ''}</div>`;
     }
