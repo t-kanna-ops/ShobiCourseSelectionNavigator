@@ -35,9 +35,12 @@ async function renderClassRecommendationAreaByProfile(profile) {
     let score = 0;
     profile.forEach(({key, weight})=>{
       const normKey = norm(key);
-      attrs.forEach(attr=>{
-        if(normKey === attr) score += weight;
-      });
+      const matched = attrs.some(attr => normKey === attr);
+      if (matched) {
+        score += weight;  // 一致：加点
+      } else {
+        score -= weight;  // 非一致：同重みでマイナス補正
+      }
     });
     return { code:cols[0], className:cols[1], teacher:cols[2], score };
   }).filter(Boolean);
@@ -45,7 +48,7 @@ async function renderClassRecommendationAreaByProfile(profile) {
   const maxScore = Math.max(...results.map(r=>r.score), 0.001);
   results.forEach(r=>{ r.percent = Math.round((r.score / maxScore) * 100); });
   results.sort((a,b)=>b.score-a.score);
-  const top5 = results.filter(r=>r.score>0).slice(0,5);
+  const top5 = results.slice(0,5);
   let html = '';
   if (top5.length === 0) {
     html = `<div style='color:#aaa;'>（マッチするクラスが見つかりませんでした）</div>`;
