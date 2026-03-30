@@ -103,7 +103,8 @@ async function renderTeacherRankingByProfile(profile) {
     const cols = line.split(',');
     if (cols.length < 2) return null;
     const teacher = cols[0].trim();
-    const attrs = cols.slice(1, 5).map(norm).filter(a => a !== '');
+    // 重複属性を除去してスコア計算の歪みを防ぐ
+    const attrs = [...new Set(cols.slice(1, 5).map(norm).filter(a => a !== ''))];
     let score = 0;
     profile.forEach(({ key, weight }) => {
       const normKey = norm(key);
@@ -128,12 +129,12 @@ async function renderTeacherRankingByProfile(profile) {
       : 50;
   });
 
-  const top5 = results.slice(0, 5);
+  // 全員を表示（上位5名ではなく全25名）
   let html = '';
-  if (top5.length === 0) {
+  if (results.length === 0) {
     html = `<div style='color:#aaa;'>（マッチする先生が見つかりませんでした）</div>`;
   } else {
-    html = top5.map((r, idx) => {
+    html = results.map((r, idx) => {
       const tagHtml = r.attrs.map(a => `<span style='display:inline-block;background:#0d2040;border:1px solid #30363d;border-radius:4px;padding:0.1em 0.5em;margin:0.1em;font-size:0.82em;color:#aad4ff;'>${a}</span>`).join('');
       return `<div style='margin-bottom:1.2em;padding:1em 1.2em;background:#333;border-radius:10px;box-shadow:0 0 8px #00bfff;'>
         <div style='font-size:1.1em;font-weight:bold;'>${idx + 1}位：<span style='color:#00ff99;'>${r.teacher}</span></div>
@@ -535,7 +536,7 @@ function showDiagnosisStep() {
     };
   } else if (diagnosisStep === 2) {
     main.innerHTML = `<div class="cyberpunk-init">
-      <div class="ai-message">Q2. あなたは次のどのキーワード群に興味がありますか？<br>（最大3つまで優先順位付きで選択）</div>
+      <div class="ai-message">Q2. あなたは次のどのキーワード群に興味がありますか？<br>教職課程を希望する場合は教職課程も選択してください。<br>（最大3つまで優先順位付きで選択）</div>
       <form id="q2-form">
         ${[
           {key: "create", label: "クリエイト・創作・制作・ものづくり"},
@@ -543,7 +544,7 @@ function showDiagnosisStep() {
           {key: "business", label: "ビジネス・販売・チームワーク・誰かを支える"}
         ].map(field => `<button type="button" class="q2-select-btn" data-key="${field.key}">${field.label}</button><br>`).join('')}
         <div style="margin-top:1em;border-top:1px solid #444;padding-top:0.8em;">
-          <button type="button" id="teaching-btn" data-key="teaching" style="background:#80ee80;color:#222;padding:0.45em 1.1em;border-radius:6px;border:none;cursor:pointer;font-size:0.9em;font-family:monospace;">教職課程・教員免許</button>
+          <button type="button" id="teaching-btn" data-key="teaching" style="background:#80ee80;color:#222;padding:0.45em 1.1em;border-radius:6px;border:none;cursor:pointer;font-size:0.9em;font-family:monospace;">教職課程</button>
         </div>
       </form>
       <div id="q2-selected-list" style="margin:1em 0;"></div>
@@ -578,7 +579,7 @@ function showDiagnosisStep() {
         box.style.cssText = 'background:#1a2233;border:2px solid #ff6666;border-radius:12px;padding:1.8em 2em;max-width:480px;width:90%;color:#e0f0ff;font-size:0.92em;line-height:1.8;';
         box.innerHTML = `
           <div style="font-weight:bold;font-size:1.1em;color:#ff6666;margin-bottom:0.8em;">⚠️ 重要：教職履修の覚悟</div>
-          <p style="margin:0 0 1em;">教職課程では、卒業要件124単位に加え約43単位の追加修得が必要で、卒業枠内の一部科目も必修化されます。また教育実習は厳しい条件をクリアし、本気で教員を志す学生のみが対象です。</p>
+          <p style="margin:0 0 1em;">教職課程では、卒業要件124単位に加え約43単位の追加修得が必要で、卒業要件内の一部科目も必修化されます。また教育実習は厳しい条件をクリアし、本気で教員を志す学生のみが対象です。</p>
           <p style="margin:0 0 1em;">各学期の説明会出席は必須です。ガイドを熟読し、仕組みを完全に理解して臨んでください。理解不足は自身の時間を無駄にするだけでなく、実習先に多大な迷惑をかけます。</p>
           <p style="margin:0 0 1.2em;font-weight:bold;color:#ffd700;">強い責任感と覚悟を持って選択してください。</p>
           <div style="text-align:center;">
