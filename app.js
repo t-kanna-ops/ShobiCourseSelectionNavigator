@@ -299,6 +299,7 @@ function renderSelectedCoursesList() {
       z-index: 9999;
       box-shadow: 0 4px 18px rgba(0,191,255,0.25);
       pointer-events: none;
+      text-align: left;
     }
     .hint-icon:hover .hint-bubble,
     .hint-icon:focus .hint-bubble {
@@ -350,7 +351,7 @@ function showStartupNotice() {
   function render() {
     const isLast = step === NOTICES.length - 1;
     overlay.innerHTML = `
-      <div style="background:#1a2233;border:2px solid #ffd700;border-radius:14px;padding:2em 2.2em;max-width:460px;width:92%;color:#e0f0ff;line-height:1.85;">
+      <div style="background:#1a2233;border:2px solid #ffd700;border-radius:14px;padding:2em 2.2em;max-width:460px;width:92%;color:#e0f0ff;line-height:1.85;text-align:left;">
         <div style="font-size:1.05em;white-space:pre-wrap;">${NOTICES[step].text}</div>
         <div style="text-align:right;margin-top:1.6em;">
           <button id="notice-next-btn" class="cyberpunk-btn" style="min-width:100px;">${isLast ? 'はじめる ▶' : '次へ ▶'}</button>
@@ -440,7 +441,7 @@ function showTutorial() {
     ).join('');
 
     overlay.innerHTML = `
-      <div style="background:#1a2233;border:2px solid #00ff99;border-radius:16px;padding:2em 2.2em;max-width:500px;width:92%;color:#e0f0ff;font-size:0.95em;line-height:1.75;position:relative;">
+      <div style="background:#1a2233;border:2px solid #00ff99;border-radius:16px;padding:2em 2.2em;max-width:500px;width:92%;color:#e0f0ff;font-size:0.95em;line-height:1.75;position:relative;text-align:left;">
         <div style="font-size:1.25em;font-weight:bold;color:#00ff99;margin-bottom:0.9em;">${step.title}</div>
         <div style="min-height:130px;">${step.body}</div>
         <div style="text-align:center;margin:1.2em 0 0.5em;">${dots}</div>
