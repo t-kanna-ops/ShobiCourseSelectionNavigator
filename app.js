@@ -37,9 +37,9 @@ async function renderClassRecommendationAreaByProfile(profile) {
       const normKey = norm(key);
       const matched = attrs.some(attr => normKey === attr);
       if (matched) {
-        score += weight;       // 一致：加点（全Q共通）
-      } else if (q !== 'q2') {
-        score -= weight;       // 非一致：Q1/Q4のみマイナス補正、Q2はペナルティなし
+        score += weight;  // 一致：加点（全Q共通）
+      } else {
+        score -= weight;  // 非一致：全Qマイナス補正
       }
     });
     return { code:cols[0], className:cols[1], teacher:cols[2], score };
