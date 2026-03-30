@@ -1007,6 +1007,12 @@ function createCourseCard(course, selectable, showBadge) {
     req.className = "course-required-label";
     row.appendChild(req);
     // 選択ボタンは絶対に生成しない
+  } else if (['C104','C105','C124','C125','C123','C147','C165'].includes(course.id) && !userAnswers.teaching) {
+    // 教職課程限定科目 かつ フラグOFFの場合
+    const notice = document.createElement("span");
+    notice.textContent = "※教職課程履修者のみ履修可";
+    notice.style.cssText = "font-size:0.78em;color:#ff9999;display:block;padding:0.3em 0.5em;";
+    row.appendChild(notice);
   } else if (selectable) {
     // ボタン縦並びコンテナ
     const btnWrap = document.createElement("div");
