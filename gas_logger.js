@@ -45,10 +45,14 @@ function doPost(e) {
       // ===== 上書き更新モード =====
       const rowIdx = parseInt(data.rowId, 10);
       if (!isNaN(rowIdx) && rowIdx > 1) {
-        // AIコメント列（J列 = 10列目）だけ更新
-        sheet.getRange(rowIdx, 10).setValue(data.aiReply || '');
-        // イベント列（B列 = 2列目）も更新
+        // イベント列（B列 = 2列目）更新
         sheet.getRange(rowIdx, 2).setValue(data.event || 'ai_response_received');
+        // DP獲得率列（H列 = 8列目）更新
+        sheet.getRange(rowIdx, 8).setValue(data.dpRate || '');
+        // 専門性と領域列（I列 = 9列目）更新
+        sheet.getRange(rowIdx, 9).setValue((data.specialty || '').replace(/\n/g, ' / '));
+        // AIコメント列（J列 = 10列目）更新
+        sheet.getRange(rowIdx, 10).setValue(data.aiReply || '');
       }
       const result = JSON.stringify({ status: 'ok', rowId: rowIdx });
       return ContentService

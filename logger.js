@@ -69,13 +69,15 @@ const AppLogger = (() => {
   /**
    * AIレスポンス受信時の上書き更新（セッションキャッシュのrowIdで同一行を更新）
    */
-  async function updateWithAI(aiReply) {
+  async function updateWithAI(aiReply, extra = {}) {
     try {
       const rowId = sessionStorage.getItem(SESSION_ROW_KEY);
       const payload = {
-        event:   'ai_response_received',
-        aiReply: aiReply,
-        rowId:   rowId ? parseInt(rowId, 10) : null
+        event:     'ai_response_received',
+        aiReply:   aiReply,
+        dpRate:    extra.dpRate    || '',
+        specialty: extra.specialty || '',
+        rowId:     rowId ? parseInt(rowId, 10) : null
       };
 
       if (rowId) {
@@ -86,13 +88,15 @@ const AppLogger = (() => {
         await postToGAS({ ...payload, timestamp: new Date().toISOString(), browser: navigator.userAgent });
       }
 
-      // localStorageの最新エントリにもaiReplyを追記
+      // localStorageの最新エントリにもaiReply/dpRate/specialtyを追記
       const logs = load();
       if (logs.length > 0) {
         const last = logs[logs.length - 1];
         if (!last.aiReply) {
-          last.aiReply = aiReply;
-          last.event   = 'ai_response_received';
+          last.aiReply   = aiReply;
+          last.dpRate    = extra.dpRate    || '';
+          last.specialty = extra.specialty || '';
+          last.event     = 'ai_response_received';
           localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
         }
       }

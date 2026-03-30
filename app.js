@@ -1718,9 +1718,9 @@ async function renderAIAnalysis() {
     // APIリターンは data.reply で受ける
     if (data.reply) {
       resultDiv.innerHTML = `<div style='white-space:pre-line;'>${data.reply}</div>`;
-      // AIレスポンス受信時：同一行をrowIdで上書き更新
+      // AIレスポンス受信時：同一行をrowIdで上書き更新（dpRate/specialtyも含める）
       if (typeof AppLogger !== 'undefined') {
-        AppLogger.updateWithAI(data.reply);
+        AppLogger.updateWithAI(data.reply, { dpRate, specialty });
       }
     } else {
       resultDiv.innerHTML = `<div style='color:red;'>AI分析の取得に失敗しました。${data.error ? `<br>${data.error}` : ''}</div>`;
