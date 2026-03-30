@@ -75,7 +75,7 @@ async function renderClassRecommendationAreaByProfile(profile) {
     const area = document.createElement('div');
     area.id = 'class-recommend-area';
     area.style = 'margin:2em 0;padding:2em;background:#222;color:#fff;border-radius:16px;box-shadow:0 0 16px #00ff99;max-width:700px;';
-    area.innerHTML = `<div style='font-size:1.3em;font-weight:bold;margin-bottom:1em;'>あなたにおすすめの基礎演習クラス</div><div id='class-recommend-result'>${html}</div>`;
+    area.innerHTML = `<div style='font-size:1.3em;font-weight:bold;margin-bottom:1em;'>あなたにおすすめの基礎演習クラス ${hint('Q1〜Q4の回答と各クラスの属性を照合してスコアリングした上位5クラスです。担当教員・マッチ度・シラバスへのリンクを確認できます。')}</div><div id='class-recommend-result'>${html}</div>`;
     if (rankingSection) {
       rankingSection.insertAdjacentElement('afterend', area);
     } else {
@@ -151,7 +151,7 @@ async function renderTeacherRankingByProfile(profile) {
 
   document.getElementById('class-recommend-area')?.insertAdjacentHTML('afterend',
     `<div id='teacher-recommend-area' style='margin:2em 0;padding:2em;background:#222;color:#fff;border-radius:16px;box-shadow:0 0 16px #00bfff;max-width:700px;'>
-      <div style='font-size:1.3em;font-weight:bold;margin-bottom:1em;'>あなたの興味に近い分野の先生</div>
+      <div style='font-size:1.3em;font-weight:bold;margin-bottom:1em;'>あなたの興味に近い分野の先生 ${hint('各教員の専門分野属性とQ1〜Q4の回答を照合してスコアリングしています。上位10名を表示します。')}</div>
       <div id='teacher-recommend-result'>${html}</div>
     </div>`
   );
@@ -253,6 +253,68 @@ function renderSelectedCoursesList() {
       </div>
     `;
   }).join('');
+}
+
+// ===== ツールチップ（ヒント）ユーティリティ =====
+// CSS を一度だけ挿入
+(function injectTooltipStyle() {
+  if (document.getElementById('hint-tooltip-style')) return;
+  const style = document.createElement('style');
+  style.id = 'hint-tooltip-style';
+  style.textContent = `
+    .hint-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.1em;
+      height: 1.1em;
+      border-radius: 50%;
+      background: #00bfff;
+      color: #1a2233;
+      font-size: 0.72em;
+      font-weight: bold;
+      cursor: help;
+      vertical-align: middle;
+      margin-left: 0.35em;
+      position: relative;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .hint-icon .hint-bubble {
+      display: none;
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 8px);
+      transform: translateX(-50%);
+      background: #1a2233;
+      color: #e0f0ff;
+      border: 1px solid #00bfff;
+      border-radius: 8px;
+      padding: 0.6em 0.9em;
+      font-size: 1.25em;
+      font-weight: normal;
+      white-space: normal;
+      width: 260px;
+      line-height: 1.6;
+      z-index: 9999;
+      box-shadow: 0 4px 18px rgba(0,191,255,0.25);
+      pointer-events: none;
+    }
+    .hint-icon:hover .hint-bubble,
+    .hint-icon:focus .hint-bubble {
+      display: block;
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+/**
+ * ヒントアイコン（?）のHTML文字列を返す
+ * @param {string} text - ツールチップに表示する説明文
+ */
+function hint(text) {
+  const escaped = text.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<span class="hint-icon" tabindex="0">?<span class="hint-bubble">${escaped}</span></span>`;
 }
 
 // サイバーパンクUI初期化関数
@@ -385,19 +447,19 @@ function showMainApp() {
       <button id="reference-btn" class="cyberpunk-btn" style="background:#00bfff;color:#fff;">参考資料：履修モデル一覧</button>
     </div>
     <section id="your-answers-section" style="margin-bottom:1.5em;padding:1.2em 1.5em;background:#1a2233;border-radius:12px;border:1px solid #00bfff44;">
-      <h2 style="margin-bottom:0.8em;">あなたが選んだのは…</h2>
+      <h2 style="margin-bottom:0.8em;">あなたが選んだのは… ${hint('Q1〜Q4で回答した内容をもとに、あなたの興味・やりたいこと・身につけたい力・楽器を表示しています。')}</h2>
       <div id="your-answers-list"></div>
     </section>
     <section id="ranking-section">
-      <h2>おすすめランキング</h2>
+      <h2>おすすめランキング ${hint('Q1〜Q4の回答と各科目の属性を照合し、あなたの興味に近い順にスコアリングした上位10科目です。')}</h2>
       <div id="ranking-list"></div>
     </section>
     <section id="simulation-section">
-      <h2>履修シミュレーション</h2>
+      <h2>履修シミュレーション ${hint('区分ごとに科目が折り畳み表示されます。科目名をクリックすると選択・解除できます。必修科目（黄色）は解除できません。')}</h2>
       <div id="course-list"></div>
     </section>
     <section id="summary-section">
-      <h2>履修バランス</h2>
+      <h2>履修バランス ${hint('選択した科目のDP（ディプロマ・ポリシー）獲得状況をレーダーチャートで示しています。バランスよく広がるほど多角的な学びになります。')}</h2>
       <canvas id="dpRadarChart" width="400" height="400"></canvas>
       <div style="display:flex;gap:2em;justify-content:center;margin:1.5em 0;">
         <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:1em;padding-bottom:1em;min-width:200px;">
@@ -410,15 +472,15 @@ function showMainApp() {
         </div>
       </div>
       <div id="credit-summary"></div>
-      <button id="auto-select-btn" class="cyberpunk-btn" style="margin-top:1em;">おすすめ科目自動選択</button>
+      <button id="auto-select-btn" class="cyberpunk-btn" style="margin-top:1em;">おすすめ科目自動選択 ${hint('あなたのおすすめ度スコアをもとに、上限単位数（通常100単位・教職143単位）まで自動で科目を選択します。もう一度押すと解除できます。')}</button>
     </section>
     <section id="ai-analysis-section">
-      <h2>履修ナビ一言アドバイス</h2>
+      <h2>履修ナビ一言アドバイス ${hint('Q1〜Q4の回答と履修データをAIに送信し、進路提案や大学生活のアドバイスを生成します。AIの回答には数秒かかります。')}</h2>
       <button id="ai-analysis-start-btn" class="cyberpunk-btn" style="margin-bottom:1em;">アドバイスを聞く</button>
       <div id="ai-analysis-result">${aiAnalysisResult}</div>
     </section>
     <section id="selected-courses-section">
-      <h2>選択科目一覧</h2>
+      <h2>選択科目一覧 ${hint('現在選択中の科目を配当年次ごとに整理して表示します。1年次あたり上限36単位を超えた場合、固定科目以外は自動で翌年次に繰り越されます。')}</h2>
       <div id="selected-courses-list"></div>
     </section>
   `;
