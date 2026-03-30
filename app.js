@@ -27,19 +27,32 @@ async function renderClassRecommendationAreaByProfile(profile) {
   }
   // 正規化関数（全角→半角・小文字化）
   const norm = v => v ? v.toString().trim().toLowerCase().replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)) : '';
-  // profile は [{key, weight}] の重み付き配列
+  // profile は [{key, weight, q}] の重み付き配列
   const results = lines.map(line=>{
     const cols = line.split(',');
     if(cols.length<7) return null;
-    const attrs = cols.slice(3,7).map(norm);
+    // 属性ごとの出現回数を集計（重複＝強調）
+    const attrCounts = {};
+    cols.slice(3,7).map(norm).filter(a => a !== '').forEach(a => {
+      attrCounts[a] = (attrCounts[a] || 0) + 1;
+    });
+    const attrs = Object.keys(attrCounts);
+    const profileKeys = new Set(profile.map(({ key }) => norm(key)));
     let score = 0;
     profile.forEach(({key, weight, q})=>{
       const normKey = norm(key);
-      const matched = attrs.some(attr => normKey === attr);
-      if (matched) {
-        score += weight;  // 一致：加点（全Q共通）
+      const count = attrCounts[normKey] || 0;
+      if (count > 0) {
+        score += weight * count; // 重複回数分だけ重みを倍増
       } else {
-        score -= weight;  // 非一致：全Qマイナス補正
+        // Q4不一致は固定ペナルティ -3.00、それ以外は -weight
+        score -= (q === 'q4') ? 3.00 : weight;
+      }
+    });
+    // クラスが持つ属性のうちユーザーが選ばなかったものにペナルティ -1.00
+    attrs.forEach(attr => {
+      if (!profileKeys.has(attr)) {
+        score -= 1.00;
       }
     });
     return { code:cols[0], className:cols[1], teacher:cols[2], score };
