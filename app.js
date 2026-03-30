@@ -1261,7 +1261,7 @@ function updateSelectedCreditInfo() {
   }, 0);
   const creditDiv = document.getElementById('selected-credit-info');
   if (creditDiv) {
-    creditDiv.textContent = `${n}/100`;
+    creditDiv.textContent = `${n}/${userAnswers.teaching ? 143 : 100}`;
   }
 }
 function renderPieCharts() {
