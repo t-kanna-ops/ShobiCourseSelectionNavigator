@@ -190,6 +190,7 @@ let diagnosisStep = 0;
 // グローバル宣言（分析結果表示用）
 let aiAnalysisResult = '';
 let courseSectionOpenState = {};
+let lastDpValues = []; // renderCharts()が更新するdpValues（renderAIAnalysisで参照）
 // courseData, dpLabelsはdata.jsで定義済み
 
 // アシスタント起動時のメッセージ表示関数
@@ -1118,6 +1119,7 @@ function renderCharts() {
     const denom = totalDP[key] || 1;
     return Math.round((selectedDP[key] / denom) * 100) / 100;
   });
+  lastDpValues = dpValues; // renderAIAnalysis から参照できるよう保存
   // 大項目DP集計（DP1,DP2,DP3,DP4）
   const dpGroups = [
     dpKeys.filter(k => k.startsWith('1-')), // DP1
@@ -1682,14 +1684,11 @@ function showFloatMenu() {
 
 async function renderAIAnalysis() {
   const data = getSelectedFieldDomainDP();
-  // DP獲得率（例: DP名と値のリスト）
-  // 最大獲得値（仮にdata.dpMaxArrで取得、なければ定数で最大値を定義）
-  const dpMaxArr = data.dpMaxArr || [20, 20, 20, 20, 20, 20]; // DP数に応じて最大値を設定
-  const dpRate = data.dpLabelsArr.map((label, i) => {
-    const val = data.dpData[i];
-    const max = dpMaxArr[i] || 1;
-    const percent = Math.round((val / max) * 100);
-    return `${label}: ${percent}%`;
+  // DP獲得率：dpValuesを使ってDP名と値をリスト化
+  const dpKeys = Object.keys(dpLabels);
+  const dpRate = dpKeys.map((key, i) => {
+    const val = lastDpValues[i] ?? 0;
+    return `${dpLabels[key]}: ${val}`;
   }).join(', ');
   // 専門性と履修領域（例: フィールド・分野名と値のリスト）
   const fieldRate = data.fieldLabels.map((label, i) => `${label}: ${data.fieldData[i]}`).join(', ');
