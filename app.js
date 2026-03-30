@@ -383,7 +383,7 @@ function showDiagnosisStep() {
       <div id="q1-selected-list" style="margin:1em 0;"></div>
       <button id="next-btn" class="cyberpunk-btn">次へ</button>
     </div>`;
-    let selectedQ1 = [];
+    let selectedQ1 = [...(userAnswers.q1 || [])];
     const maxQ1 = 5;
     const q1Options = [
       {key: "pops", label: "ポピュラー音楽"},
@@ -439,9 +439,12 @@ function showDiagnosisStep() {
         ].map(field => `<button type="button" class="q2-select-btn" data-key="${field.key}">${field.label}</button><br>`).join('')}
       </form>
       <div id="q2-selected-list" style="margin:1em 0;"></div>
-      <button id="next-btn" class="cyberpunk-btn">次へ</button>
+      <div style="display:flex;gap:0.8em;">
+        <button id="back-btn" class="cyberpunk-btn" style="background:#555;">戻る</button>
+        <button id="next-btn" class="cyberpunk-btn">次へ</button>
+      </div>
     </div>`;
-    let selectedQ2 = [];
+    let selectedQ2 = [...(userAnswers.q2 || [])];
     const maxQ2 = 3;
     const q2Options = [
       {key: "create", label: "クリエイト・創作・制作・ものづくり"},
@@ -476,6 +479,11 @@ function showDiagnosisStep() {
       btn.style.color = '#222';
     });
     updateSelectedList();
+    document.getElementById("back-btn").onclick = () => {
+      userAnswers.q2 = selectedQ2;
+      diagnosisStep = 1;
+      showDiagnosisStep();
+    };
     document.getElementById("next-btn").onclick = () => {
       userAnswers.q2 = selectedQ2;
       diagnosisStep = 3;
@@ -488,9 +496,12 @@ function showDiagnosisStep() {
         ${Object.entries(dpLabels).map(([key, label]) => `<button type="button" class="q3-select-btn" data-key="${key}">${label}</button>`).join('')}
       </form>
       <div id="q3-selected-list" style="margin:1em 0;"></div>
-      <button id="next-btn" class="cyberpunk-btn">診断する</button>
+      <div style="display:flex;gap:0.8em;">
+        <button id="back-btn" class="cyberpunk-btn" style="background:#555;">戻る</button>
+        <button id="next-btn" class="cyberpunk-btn">次へ</button>
+      </div>
     </div>`;
-    let selectedQ3 = [];
+    let selectedQ3 = [...(userAnswers.q3 || [])];
     const maxQ3 = 5;
     const q3Btns = Array.from(document.querySelectorAll('.q3-select-btn'));
     const selectedList = document.getElementById('q3-selected-list');
@@ -517,6 +528,11 @@ function showDiagnosisStep() {
       btn.style.color = '#222';
     });
     updateSelectedList();
+    document.getElementById("back-btn").onclick = () => {
+      userAnswers.q3 = selectedQ3;
+      diagnosisStep = 2;
+      showDiagnosisStep();
+    };
     document.getElementById("next-btn").onclick = () => {
       userAnswers.q3 = selectedQ3;
       diagnosisStep = 4;
@@ -534,9 +550,12 @@ function showDiagnosisStep() {
         ].map(opt => `<button type="button" class="q4-select-btn" data-key="${opt.key}">${opt.label}</button><br>`).join('')}
       </form>
       <div id="q4-selected-list" style="margin:1em 0;"></div>
-      <button id="next-btn" class="cyberpunk-btn">診断する</button>
+      <div style="display:flex;gap:0.8em;">
+        <button id="back-btn" class="cyberpunk-btn" style="background:#555;">戻る</button>
+        <button id="next-btn" class="cyberpunk-btn">診断する</button>
+      </div>
     </div>`;
-    let selectedQ4 = [];
+    let selectedQ4 = [...(userAnswers.q4 || [])];
     const q4Options = [
       {key: "keyboard", label: "キーボード・ピアノ"},
       {key: "brass",    label: "吹奏楽器（管楽器・パーカッションなど）"},
@@ -569,6 +588,11 @@ function showDiagnosisStep() {
       btn.style.color = '#222';
     });
     updateQ4List();
+    document.getElementById("back-btn").onclick = () => {
+      userAnswers.q4 = selectedQ4;
+      diagnosisStep = 3;
+      showDiagnosisStep();
+    };
     document.getElementById("next-btn").onclick = () => {
       userAnswers.q4 = selectedQ4;
       diagnosisStep = 5;
