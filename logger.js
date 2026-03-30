@@ -29,8 +29,10 @@ const AppLogger = (() => {
     try {
       const res = await fetch('https://api.ipify.org?format=json');
       const json = await res.json();
+      console.log('[AppLogger] IP取得成功:', json.ip);
       return json.ip || '';
-    } catch {
+    } catch (e) {
+      console.warn('[AppLogger] IP取得失敗:', e);
       return '';
     }
   }
@@ -55,6 +57,7 @@ const AppLogger = (() => {
 
       // GASへ送信し、返ってきたrowIdをセッションストレージにキャッシュ
       const rowId = await postToGAS(logEntry);
+      console.log('[AppLogger] GAS送信結果 rowId:', rowId, ' ip:', ip);
       if (rowId) {
         sessionStorage.setItem(SESSION_ROW_KEY, String(rowId));
       }
