@@ -171,8 +171,8 @@ function setupCyberpunkFlow() {
 function showMainApp() {
   // 画面描画前におすすめ科目抽出
   recommendCourses();
-  // 必修科目は常に選択状態
-  requiredCourseIds.forEach(id => {
+  // 必修科目は常に選択状態（教職フラグも考慮）
+  getRequiredIds().forEach(id => {
     if (!selectedCourses.includes(id)) selectedCourses.push(id);
   });
   const main = document.getElementById("main-area");
@@ -267,11 +267,11 @@ function showMainApp() {
       const recommended = courseData
         .filter(c => c.isRecommended)
         .sort((a, b) => b._recommendPercent - a._recommendPercent);
-      let totalCredits = requiredCourseIds.reduce((sum, id) => {
+      let totalCredits = getRequiredIds().reduce((sum, id) => {
         const c = courseData.find(x => x.id === id);
         return c ? sum + c.credits : sum;
       }, 0);
-      selectedCourses = [...requiredCourseIds]; // 必修は常に選択
+      selectedCourses = [...getRequiredIds()]; // 必修は常に選択
       autoSelectedIds = [];
       let pool = [...recommended];
       for (const c of pool) {
@@ -283,7 +283,7 @@ function showMainApp() {
       }
       if (totalCredits > 100) {
         let over = totalCredits - 100;
-        let removable = selectedCourses.filter(id => !requiredCourseIds.includes(id));
+        let removable = selectedCourses.filter(id => !getRequiredIds().includes(id));
         while (over > 0 && removable.length > 0) {
           const idx = Math.floor(Math.random() * removable.length);
           const removeId = removable[idx];
@@ -362,6 +362,42 @@ const requiredCourseIds = [
   "C034", "C038", "C039", "C040", "C042", "C081",
   "C182", "C183", "C184", "C185", "C186", "C187", "C188", "C189"
 ];
+// 教職課程履修時の追加必修科目id
+const teachingRequiredIds = [
+  "C029", // 日本音楽史
+  "C030", // 西洋音楽史Ⅰ
+  "C031", // 西洋音楽史Ⅱ
+  "C052", // 諸民族の音楽
+  "C113", // 音楽基礎論
+  "C097", // ソルフェージュⅠ
+  "C120", // ソルフェージュⅡ
+  "C098", // 合唱Ⅰ
+  "C099", // 合唱Ⅱ
+  "C121", // 歌唱法Ⅰ
+  "C122", // 歌唱法Ⅱ
+  "C100", // キーボード演習Ⅰ
+  "C101", // キーボード演習Ⅱ
+  "C145", // 伴奏法Ⅰ
+  "C146", // 伴奏法Ⅱ
+  "C123", // 日本音楽実習Ⅰ
+  "C147", // 日本音楽実習Ⅱ
+  "C148", // 指揮法Ⅰ
+  "C149", // 指揮法Ⅱ
+  "C134", // 作曲法Ⅰ
+  "C135", // 作曲法Ⅱ
+  "C165", // 日本伝統音楽「長唄」の発声と表現
+  "C104", // 教職ピアノⅠ
+  "C105", // 教職ピアノⅡ
+  "C124", // 教職ピアノⅢ
+  "C125"  // 教職ピアノⅣ
+];
+// 現在の必修 IDリスト（教職フラグを考慮）を返す
+function getRequiredIds() {
+  if (userAnswers.teaching) {
+    return [...new Set([...requiredCourseIds, ...teachingRequiredIds])];
+  }
+  return requiredCourseIds;
+}
 // 診断フェーズのUI表示関数
 function showDiagnosisStep() {
   const main = document.getElementById("main-area");
@@ -969,8 +1005,8 @@ function renderCharts() {
 
 
       function toggleCourseSelection(courseId) {
-        // 必修科目は選択解除不可
-        if (window.requiredCourseIds && window.requiredCourseIds.includes(courseId)) return;
+        // 必修科目は選択解除不可（教職フラグも考慮）
+        if (getRequiredIds().includes(courseId)) return;
         if (selectedCourses.includes(courseId)) {
           selectedCourses = selectedCourses.filter(id => id !== courseId);
         } else {
@@ -995,11 +1031,8 @@ function createCourseCard(course, selectable, showBadge) {
   // レイアウト: 左に選択ボタン、右に3段（科目名、区分/年次、単位）
   const row = document.createElement("div");
   row.className = "course-row";
-  // 必修科目IDリスト
-  const requiredIds = [
-    "C034", "C038", "C039", "C040", "C042", "C081",
-    "C182", "C183", "C184", "C185", "C186", "C187", "C188", "C189"
-  ];
+  // 必修科目IDリスト（教職フラグも考慮）
+  const requiredIds = getRequiredIds();
   if (requiredIds.includes(course.id)) {
     // 必修ラベル（赤字）
     const req = document.createElement("span");
