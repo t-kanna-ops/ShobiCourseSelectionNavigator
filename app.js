@@ -82,6 +82,73 @@ async function renderClassRecommendationAreaByProfile(profile) {
       insertTarget.appendChild(area);
     }
   }
+  // 教員ランキングを続けて表示
+  await renderTeacherRankingByProfile(profile);
+}
+
+async function renderTeacherRankingByProfile(profile) {
+  const norm = v => v ? v.toString().trim().toLowerCase().replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)) : '';
+  let csv = '';
+  try {
+    const res = await fetch('kyoin.csv');
+    if (!res.ok) throw new Error(`kyoin.csv の取得に失敗しました (HTTP ${res.status})`);
+    csv = await res.text();
+  } catch(e) {
+    return;
+  }
+  const lines = csv.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length > 0 && lines[0].charCodeAt(0) === 0xFEFF) lines[0] = lines[0].slice(1);
+
+  const results = lines.map(line => {
+    const cols = line.split(',');
+    if (cols.length < 2) return null;
+    const teacher = cols[0].trim();
+    const attrs = cols.slice(1, 5).map(norm).filter(a => a !== '');
+    let score = 0;
+    profile.forEach(({ key, weight }) => {
+      const normKey = norm(key);
+      const matched = attrs.some(attr => normKey === attr);
+      if (matched) {
+        score += weight;
+      } else {
+        score -= weight;
+      }
+    });
+    return { teacher, attrs, score };
+  }).filter(Boolean);
+
+  results.sort((a, b) => b.score - a.score);
+  const scores = results.map(r => r.score);
+  const mean = scores.reduce((s, v) => s + v, 0) / (scores.length || 1);
+  const variance = scores.reduce((s, v) => s + (v - mean) ** 2, 0) / (scores.length || 1);
+  const stdDev = Math.sqrt(variance);
+  results.forEach(r => {
+    r.percent = stdDev > 0
+      ? Math.round((50 + 10 * (r.score - mean) / stdDev) * 10) / 10
+      : 50;
+  });
+
+  const top5 = results.slice(0, 5);
+  let html = '';
+  if (top5.length === 0) {
+    html = `<div style='color:#aaa;'>（マッチする先生が見つかりませんでした）</div>`;
+  } else {
+    html = top5.map((r, idx) => {
+      const tagHtml = r.attrs.map(a => `<span style='display:inline-block;background:#0d2040;border:1px solid #30363d;border-radius:4px;padding:0.1em 0.5em;margin:0.1em;font-size:0.82em;color:#aad4ff;'>${a}</span>`).join('');
+      return `<div style='margin-bottom:1.2em;padding:1em 1.2em;background:#333;border-radius:10px;box-shadow:0 0 8px #00bfff;'>
+        <div style='font-size:1.1em;font-weight:bold;'>${idx + 1}位：<span style='color:#00ff99;'>${r.teacher}</span></div>
+        <div style='margin-top:0.4em;'>${tagHtml}</div>
+        <div style='margin-top:0.5em;'><span style='color:#ffd700;font-weight:bold;'>マッチ度 ${r.percent}%</span></div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('class-recommend-area')?.insertAdjacentHTML('afterend',
+    `<div id='teacher-recommend-area' style='margin:2em 0;padding:2em;background:#222;color:#fff;border-radius:16px;box-shadow:0 0 16px #00bfff;max-width:700px;'>
+      <div style='font-size:1.3em;font-weight:bold;margin-bottom:1em;'>あなたの興味に近い分野の先生</div>
+      <div id='teacher-recommend-result'>${html}</div>
+    </div>`
+  );
 }
 // データファイルのロード確認
 if (typeof courseData === 'undefined' || typeof dpLabels === 'undefined') {
