@@ -91,7 +91,7 @@ if (typeof courseData === 'undefined' || typeof dpLabels === 'undefined') {
 // グローバル状態管理
 let selectedCourses = [];
 let radarChart;
-let userAnswers = { q1: [], q2: [], q3: [], q4: [] };
+let userAnswers = { q1: [], q2: [], q3: [], q4: [], teaching: false };
 let diagnosisStep = 0;
 // グローバル宣言（分析結果表示用）
 let aiAnalysisResult = '';
@@ -437,6 +437,9 @@ function showDiagnosisStep() {
           {key: "performance", label: "パフォーマンス・演奏・表現・舞台に立つ"},
           {key: "business", label: "ビジネス・販売・チームワーク・誰かを支える"}
         ].map(field => `<button type="button" class="q2-select-btn" data-key="${field.key}">${field.label}</button><br>`).join('')}
+        <div style="margin-top:1em;border-top:1px solid #444;padding-top:0.8em;">
+          <button type="button" id="teaching-btn" class="q2-select-btn" data-key="teaching" style="background:#80ee80;color:#222;">教職課程・小中学校教員免許</button>
+        </div>
       </form>
       <div id="q2-selected-list" style="margin:1em 0;"></div>
       <div style="display:flex;gap:0.8em;">
@@ -445,12 +448,23 @@ function showDiagnosisStep() {
       </div>
     </div>`;
     let selectedQ2 = [...(userAnswers.q2 || [])];
+    let teachingFlag = !!(userAnswers.teaching);
     const maxQ2 = 3;
     const q2Options = [
       {key: "create", label: "クリエイト・創作・制作・ものづくり"},
       {key: "performance", label: "パフォーマンス・演奏・表現・舞台に立つ"},
       {key: "business", label: "ビジネス・販売・チームワーク・誰かを支える"}
     ];
+    const teachingBtn = document.getElementById('teaching-btn');
+    function updateTeachingBtn() {
+      teachingBtn.style.background = teachingFlag ? '#ffff00' : '#80ee80';
+      teachingBtn.style.color = '#222';
+    }
+    teachingBtn.onclick = () => {
+      teachingFlag = !teachingFlag;
+      updateTeachingBtn();
+    };
+    updateTeachingBtn();
     const q2Btns = Array.from(document.querySelectorAll('.q2-select-btn'));
     const selectedList = document.getElementById('q2-selected-list');
     function updateSelectedList() {
@@ -481,11 +495,13 @@ function showDiagnosisStep() {
     updateSelectedList();
     document.getElementById("back-btn").onclick = () => {
       userAnswers.q2 = selectedQ2;
+      userAnswers.teaching = teachingFlag;
       diagnosisStep = 1;
       showDiagnosisStep();
     };
     document.getElementById("next-btn").onclick = () => {
       userAnswers.q2 = selectedQ2;
+      userAnswers.teaching = teachingFlag;
       diagnosisStep = 3;
       showDiagnosisStep();
     };
