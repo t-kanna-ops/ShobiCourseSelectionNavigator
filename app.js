@@ -1704,7 +1704,7 @@ async function renderAIAnalysis() {
   const q3Text = (userAnswers.q3||[]).map(k=>dpLabels[k]||k).join('、') || 'なし';
   const q4Text = (userAnswers.q4||[]).map(k=>q4Map[k]||k).join('、') || 'なし';
   // プロンプト生成（シンプル版）
-  const prompt = `日本語だけで返答してください。Markdownは使わないでください。\n\n音楽・舞台・エンタメ系の大学に通う学生へ、明るくフレンドリーな口調でアドバイスをお願いします。\n\n【学生の興味・関心】\n・興味のある分野：${q1Text}\n・やりたいこと：${q2Text}\n・身につけたい力：${q3Text}\n・演奏したい楽器：${q4Text}\n\n【履修データ】\n・DP獲得率：${dpRate}\n・専門性と領域：${specialty}\n\n以下の2点を150字以内でそれぞれ答えてください。\n\n（１）この学生に向いていそうな職業や進路を、具体的な職業名で3つ提案してください。理由も一言添えてください。\n\n（２）大学生活や学外でやっておくと良いことを1〜2つ、明るく具体的に伝えてください。`;
+  const prompt = `日本語だけで返答してください。Markdownは使わないでください。\n\n音楽・舞台・エンタメ系の大学に通う学生へ、明るくフレンドリーな口調でアドバイスをお願いします。\n\n【学生の興味・関心】\n・興味のある分野：${q1Text}\n・やりたいこと：${q2Text}\n・身につけたい力：${q3Text}\n・演奏したい楽器：${q4Text}\n\n【履修データ】\n・DP獲得率：${dpRate}\n・専門性と領域：${specialty}\n\n以下の2点を150字以内でそれぞれ答えてください。\n\n（１）この学生に向いていそうな職業や進路を、具体的な職業名で3つ提案してください。各職業について、理由は挙げず、その職業に求められる能力・スキル・学びを一言で教えてください。\n\n（２）大学生活や学外でやっておくと良いことを1〜2つ、明るく具体的に伝えてください。`;
   // API送信
   const resultDiv = document.getElementById('ai-analysis-result');
   resultDiv.innerHTML = '<div style="color:#00bfff;">アドバイスを考えているよ！ちょっと待ってね✨</div>';
