@@ -138,14 +138,15 @@ async function renderTeacherRankingByProfile(profile) {
   if (results.length === 0) {
     html = `<div style='color:#aaa;'>（マッチする先生が見つかりませんでした）</div>`;
   } else {
-    html = results.slice(0, 10).map((r, idx) => {
-      const tagHtml = r.attrs.map(a => `<span style='display:inline-block;background:#0d2040;border:1px solid #30363d;border-radius:4px;padding:0.1em 0.5em;margin:0.1em;font-size:0.82em;color:#aad4ff;'>${a}</span>`).join('');
-      return `<div style='margin-bottom:1.2em;padding:1em 1.2em;background:#333;border-radius:10px;box-shadow:0 0 8px #00bfff;'>
-        <div style='font-size:1.1em;font-weight:bold;'>${idx + 1}位：<span style='color:#00ff99;'>${r.teacher}</span></div>
-        <div style='margin-top:0.4em;'>${tagHtml}</div>
-        <div style='margin-top:0.5em;'><span style='color:#ffd700;font-weight:bold;'>マッチ度 ${r.percent}%</span></div>
-      </div>`;
-    }).join('');
+    html = `<table style='width:100%;border-collapse:collapse;'>` +
+      results.slice(0, 10).map((r, idx) =>
+        `<tr style='border-bottom:1px solid #444;'>
+          <td style='padding:0.5em 0.8em;color:#aaa;white-space:nowrap;'>${idx + 1}位</td>
+          <td style='padding:0.5em 0.8em;font-weight:bold;color:#00ff99;'>${r.teacher}</td>
+          <td style='padding:0.5em 0.8em;color:#ffd700;white-space:nowrap;'>マッチ度 ${r.percent}%</td>
+        </tr>`
+      ).join('') +
+      `</table>`;
   }
 
   document.getElementById('class-recommend-area')?.insertAdjacentHTML('afterend',
