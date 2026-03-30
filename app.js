@@ -111,13 +111,14 @@ async function renderTeacherRankingByProfile(profile) {
     const attrs = Object.keys(attrCounts); // 表示用（重複除去済み）
     const profileKeys = new Set(profile.map(({ key }) => norm(key)));
     let score = 0;
-    profile.forEach(({ key, weight }) => {
+    profile.forEach(({ key, weight, q }) => {
       const normKey = norm(key);
       const count = attrCounts[normKey] || 0;
       if (count > 0) {
         score += weight * count; // 重複回数分だけ重みを倍増
       } else {
-        score -= weight;
+        // Q4不一致は固定ペナルティ -3.00、それ以外は -weight
+        score -= (q === 'q4') ? 3.00 : weight;
       }
     });
     // 教員が持つ属性のうちユーザーが選ばなかったものにペナルティ -1.00
