@@ -109,6 +109,7 @@ async function renderTeacherRankingByProfile(profile) {
       attrCounts[a] = (attrCounts[a] || 0) + 1;
     });
     const attrs = Object.keys(attrCounts); // 表示用（重複除去済み）
+    const profileKeys = new Set(profile.map(({ key }) => norm(key)));
     let score = 0;
     profile.forEach(({ key, weight }) => {
       const normKey = norm(key);
@@ -117,6 +118,12 @@ async function renderTeacherRankingByProfile(profile) {
         score += weight * count; // 重複回数分だけ重みを倍増
       } else {
         score -= weight;
+      }
+    });
+    // 教員が持つ属性のうちユーザーが選ばなかったものにペナルティ -1.00
+    attrs.forEach(attr => {
+      if (!profileKeys.has(attr)) {
+        score -= 1.00;
       }
     });
     return { teacher, attrs, score };
