@@ -103,14 +103,18 @@ async function renderTeacherRankingByProfile(profile) {
     const cols = line.split(',');
     if (cols.length < 2) return null;
     const teacher = cols[0].trim();
-    // 重複属性を除去してスコア計算の歪みを防ぐ
-    const attrs = [...new Set(cols.slice(1, 5).map(norm).filter(a => a !== ''))];
+    // 属性ごとの出現回数を集計（重複＝強調）
+    const attrCounts = {};
+    cols.slice(1, 5).map(norm).filter(a => a !== '').forEach(a => {
+      attrCounts[a] = (attrCounts[a] || 0) + 1;
+    });
+    const attrs = Object.keys(attrCounts); // 表示用（重複除去済み）
     let score = 0;
     profile.forEach(({ key, weight }) => {
       const normKey = norm(key);
-      const matched = attrs.some(attr => normKey === attr);
-      if (matched) {
-        score += weight;
+      const count = attrCounts[normKey] || 0;
+      if (count > 0) {
+        score += weight * count; // 重複回数分だけ重みを倍増
       } else {
         score -= weight;
       }
