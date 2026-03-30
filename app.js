@@ -476,7 +476,7 @@ function showDiagnosisStep() {
           {key: "business", label: "ビジネス・販売・チームワーク・誰かを支える"}
         ].map(field => `<button type="button" class="q2-select-btn" data-key="${field.key}">${field.label}</button><br>`).join('')}
         <div style="margin-top:1em;border-top:1px solid #444;padding-top:0.8em;">
-          <button type="button" id="teaching-btn" class="q2-select-btn" data-key="teaching" style="background:#80ee80;color:#222;">教職課程・小中学校教員免許</button>
+          <button type="button" id="teaching-btn" data-key="teaching" style="background:#80ee80;color:#222;padding:0.45em 1.1em;border-radius:6px;border:none;cursor:pointer;font-size:0.9em;font-family:monospace;">教職課程・教員免許</button>
         </div>
       </form>
       <div id="q2-selected-list" style="margin:1em 0;"></div>
@@ -524,7 +524,7 @@ function showDiagnosisStep() {
       }
     };
     updateTeachingBtn();
-    const q2Btns = Array.from(document.querySelectorAll('.q2-select-btn'));
+    const q2Btns = Array.from(document.querySelectorAll('.q2-select-btn')).filter(b => b.id !== 'teaching-btn');
     const selectedList = document.getElementById('q2-selected-list');
     function updateSelectedList() {
       selectedList.innerHTML = selectedQ2.map((key, idx) => {
