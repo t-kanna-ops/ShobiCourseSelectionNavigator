@@ -461,8 +461,35 @@ function showDiagnosisStep() {
       teachingBtn.style.color = '#222';
     }
     teachingBtn.onclick = () => {
-      teachingFlag = !teachingFlag;
+      const turningOn = !teachingFlag;
+      teachingFlag = turningOn;
       updateTeachingBtn();
+      if (turningOn) {
+        // 教職課程注意フロートウィンドウを表示
+        const overlay = document.createElement('div');
+        overlay.id = 'teaching-notice-overlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9000;display:flex;align-items:center;justify-content:center;';
+        const box = document.createElement('div');
+        box.style.cssText = 'background:#1a2233;border:2px solid #00bfff;border-radius:12px;padding:1.5em 1.8em;max-width:540px;width:90%;max-height:80vh;overflow-y:auto;color:#e0f0ff;font-size:0.9em;line-height:1.7;';
+        box.innerHTML = `
+          <div style="font-weight:bold;font-size:1.05em;color:#00bfff;margin-bottom:0.8em;">教職課程について</div>
+          <p><strong>■本学で取得できる教員免許状の種類</strong><br>
+          本学には各学科にそれぞれ次のような教職課程を設置しています。学科によって取得できる教員免許状の種類は異なります。<br>
+          芸術表現学科の学生は、音楽教諭の免許状（中学校教諭１種免許状、および高等学校教諭１種免許状）を取得することができます。</p>
+          <p><strong>■中学校と高等学校の同時取得が原則</strong><br>
+          本学では中学校免許状と高等学校免許状を同時に取得することを原則としています。それは、私立学校の場合、多くの学校が中高一貫教育を行っており、両方の免許状を持っていることが採用条件であることが多いためです。<br>
+          特別な事情や希望によって、どちらか一方の免許状のみを取得したい場合は、個別に相談してください。</p>
+          <p><strong>■東京未来大学科目等履修</strong><br>
+          本学では東京未来大学通信教育課程との提携により、小学校教諭免許状、幼稚園教諭免許状の取得も可能です。これについては、春学期および秋学期に説明会を開催します。日程等は後日お知らせします。<br>
+          なお、小学校教諭免許状や幼稚園教諭免許状だけの取得は認めていないため、申し添えます。</p>
+          <div style="text-align:center;margin-top:1.2em;">
+            <button id="teaching-notice-ok" class="cyberpunk-btn" style="min-width:120px;">確認</button>
+          </div>
+        `;
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        document.getElementById('teaching-notice-ok').onclick = () => overlay.remove();
+      }
     };
     updateTeachingBtn();
     const q2Btns = Array.from(document.querySelectorAll('.q2-select-btn'));
