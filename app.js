@@ -237,6 +237,111 @@ function setupCyberpunkFlow() {
   document.getElementById("start-assistant-btn").onclick = () => {
     showAssistantMessage();
   };
+  // 初回訪問時（チュートリアル未完了）はチュートリアルを表示
+  if (!localStorage.getItem('shobi_tutorial_done')) {
+    showTutorial();
+  }
+}
+
+// ===== チュートリアル =====
+function showTutorial() {
+  const STEPS = [
+    {
+      title: '👋 ようこそ！履修科目選択アシスタント',
+      body: `<p>このツールは、あなたの<strong>興味・関心・目標</strong>に合わせて、履修すべき科目をAIが提案するアシスタントです。</p>
+<p style="margin-top:0.8em;">初めて使う方のために、かんたんな使い方を説明します。<br>右下の「スキップ」を押すといつでも終了できます。</p>`
+    },
+    {
+      title: '📋 全体の流れ',
+      body: `<ol style="line-height:2;padding-left:1.4em;">
+  <li><strong>Q1〜Q4の質問に回答</strong>（約2分）</li>
+  <li>あなたの回答をもとに<strong>おすすめ科目を自動表示</strong></li>
+  <li>AIが<strong>進路アドバイス</strong>をコメント</li>
+  <li>科目を選んで<strong>単位・DP・年次計画を確認</strong></li>
+  <li>おすすめの<strong>基礎演習クラスと先生</strong>も表示されます</li>
+</ol>`
+    },
+    {
+      title: '🎵 Q1：興味のある分野を選ぼう',
+      body: `<p>音楽・舞台・エンタメなど、<strong>あなたが興味を持っている分野</strong>を最大5つ、優先順位をつけて選びます。</p>
+<p style="margin-top:0.8em;color:#ffd700;">⭐ 1位に選んだ分野が最も強く反映されます。迷ったら直感で選んでOKです。</p>`
+    },
+    {
+      title: '🎯 Q2：やりたいことを選ぼう',
+      body: `<p>「クリエイト・制作」「パフォーマンス・表現」「ビジネス・支える」の中から、<strong>やりたいこと</strong>を最大3つ選びます。</p>
+<p style="margin-top:0.8em;">教員免許の取得を目指す方は <strong>「教職課程・教員免許」</strong> もチェックしてください。<br>教職課程では追加の必修科目が発生するため、重要な注意事項が表示されます。</p>`
+    },
+    {
+      title: '💪 Q3：身につけたい力を選ぼう',
+      body: `<p>DP（ディプロマ・ポリシー）に沿った<strong>20の能力指標</strong>の中から、特に伸ばしたいものを最大5つ選びます。</p>
+<p style="margin-top:0.8em;color:#00ff99;">これがレーダーチャートに反映され、バランスよく単位を積むためのヒントになります。</p>`
+    },
+    {
+      title: '🎸 Q4：楽器・専攻を選ぼう',
+      body: `<p>演奏したい・専攻している楽器を最大2つ選びます。専攻楽器に関連した実技科目が優先的に表示されます。</p>
+<p style="margin-top:0.8em;color:#aaa;">楽器が特にない場合は選ばずに次へ進んでください。</p>`
+    },
+    {
+      title: '📊 結果画面の見方',
+      body: `<ul style="line-height:2;padding-left:1.2em;">
+  <li>🏆 <strong>おすすめランキング</strong>：回答に合った科目の上位10件</li>
+  <li>📡 <strong>レーダーチャート</strong>：選択科目のDP獲得バランス</li>
+  <li>✅ <strong>科目一覧</strong>：区分ごとに全科目を閲覧・選択可能</li>
+  <li>🤖 <strong>AIアドバイス</strong>：進路・大学生活のヒントをAIがコメント</li>
+  <li>🎓 <strong>基礎演習クラス・先生ランキング</strong>：あなたに近い先生も紹介</li>
+</ul>`
+    },
+    {
+      title: '🚀 準備完了！',
+      body: `<p style="font-size:1.1em;">説明は以上です。<br>「はじめる」ボタンを押してアシスタントを起動しましょう！</p>
+<p style="margin-top:1em;color:#aaa;font-size:0.9em;">※ このチュートリアルは次回以降は表示されません。<br>もう一度見たい場合はブラウザのキャッシュをクリアしてください。</p>`
+    }
+  ];
+
+  let currentStep = 0;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'tutorial-overlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.82);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+  function renderStep() {
+    const step = STEPS[currentStep];
+    const isLast = currentStep === STEPS.length - 1;
+    const dots = STEPS.map((_, i) =>
+      `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px;background:${i === currentStep ? '#00ff99' : '#444'};"></span>`
+    ).join('');
+
+    overlay.innerHTML = `
+      <div style="background:#1a2233;border:2px solid #00ff99;border-radius:16px;padding:2em 2.2em;max-width:500px;width:92%;color:#e0f0ff;font-size:0.95em;line-height:1.75;position:relative;">
+        <div style="font-size:1.25em;font-weight:bold;color:#00ff99;margin-bottom:0.9em;">${step.title}</div>
+        <div style="min-height:130px;">${step.body}</div>
+        <div style="text-align:center;margin:1.2em 0 0.5em;">${dots}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1em;">
+          <button id="tut-skip" style="background:none;border:none;color:#888;cursor:pointer;font-size:0.9em;text-decoration:underline;">スキップ</button>
+          <div style="display:flex;gap:0.6em;">
+            ${currentStep > 0 ? `<button id="tut-prev" class="cyberpunk-btn" style="background:#444;min-width:80px;">◀ 前へ</button>` : ''}
+            <button id="tut-next" class="cyberpunk-btn" style="min-width:100px;">${isLast ? '🚀 はじめる' : '次へ ▶'}</button>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:0.8em;color:#555;margin-top:0.6em;">${currentStep + 1} / ${STEPS.length}</div>
+      </div>`;
+
+    document.getElementById('tut-skip').onclick = () => closeTutorial();
+    document.getElementById('tut-next').onclick = () => {
+      if (isLast) { closeTutorial(); }
+      else { currentStep++; renderStep(); }
+    };
+    const prevBtn = document.getElementById('tut-prev');
+    if (prevBtn) prevBtn.onclick = () => { currentStep--; renderStep(); };
+  }
+
+  function closeTutorial() {
+    localStorage.setItem('shobi_tutorial_done', '1');
+    overlay.remove();
+  }
+
+  document.body.appendChild(overlay);
+  renderStep();
 }
 
 // 診断完了後のメイン画面表示
