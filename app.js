@@ -324,12 +324,51 @@ function setupCyberpunkFlow() {
     <button id="start-assistant-btn" class="cyberpunk-btn">履修科目選択アシスタントを起動する</button>
   </div>`;
   document.getElementById("start-assistant-btn").onclick = () => {
-    showAssistantMessage();
+    showStartupNotice();
   };
   // 初回訪問時（チュートリアル未完了）はチュートリアルを表示
   if (!localStorage.getItem('shobi_tutorial_done')) {
     showTutorial();
   }
+}
+
+// 起動時注意事項モーダル（2ステップ）
+function showStartupNotice() {
+  const NOTICES = [
+    {
+      text: 'このツールはあくまでも「参考として」の科目やゼミナールを提案するものです。\n\n必ず履修科目のシラバスをよく読み、内容をしっかりと把握した上で履修登録するようにしてください。'
+    },
+    {
+      text: 'また、このツールは履修登録ではなく、履修計画のためのサポートツールです。\n\n⚠️ 履修登録には別途、ポータルシステムからの履修登録が必要です！'
+    }
+  ];
+  let step = 0;
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.78);z-index:9998;display:flex;align-items:center;justify-content:center;';
+
+  function render() {
+    const isLast = step === NOTICES.length - 1;
+    overlay.innerHTML = `
+      <div style="background:#1a2233;border:2px solid #ffd700;border-radius:14px;padding:2em 2.2em;max-width:460px;width:92%;color:#e0f0ff;line-height:1.85;">
+        <div style="font-size:1.05em;white-space:pre-wrap;">${NOTICES[step].text}</div>
+        <div style="text-align:right;margin-top:1.6em;">
+          <button id="notice-next-btn" class="cyberpunk-btn" style="min-width:100px;">${isLast ? 'はじめる ▶' : '次へ ▶'}</button>
+        </div>
+      </div>`;
+    document.getElementById('notice-next-btn').onclick = () => {
+      if (isLast) {
+        overlay.remove();
+        showAssistantMessage();
+      } else {
+        step++;
+        render();
+      }
+    };
+  }
+
+  document.body.appendChild(overlay);
+  render();
 }
 
 // ===== チュートリアル =====
