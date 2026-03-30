@@ -196,6 +196,7 @@ function renderSelectedCoursesList() {
     yearGroups[year].push(course);
   });
   // 年次ごとの単位数が36を超えていたら超過分を次の年次へ移動
+  // ただし区分9（教職に関する科目）は配当年次固定で繰り越し対象外
   const maxCreditsPerYear = 36;
   const sortedYears = Object.keys(yearGroups).map(Number).sort((a, b) => a - b);
   for (let i = 0; i < sortedYears.length; i++) {
@@ -204,12 +205,16 @@ function renderSelectedCoursesList() {
     let totalCredits = courses.reduce((sum, c) => sum + (c.credits || 0), 0);
     while (totalCredits > maxCreditsPerYear) {
       // 超過分を次の年次へ移動
-      // 最後に追加された科目から順に移動
-      const moveCourse = courses.pop();
-      if (!moveCourse) break;
+      // 区分9（教職科目）は繰り越し対象外なので末尾から「区分9以外」を探す
+      let moveIdx = -1;
+      for (let j = courses.length - 1; j >= 0; j--) {
+        if (String(courses[j].category) !== '9') { moveIdx = j; break; }
+      }
+      if (moveIdx === -1) break; // 繰り越せる科目が存在しない
+      const moveCourse = courses.splice(moveIdx, 1)[0];
       let nextYear = sortedYears[i + 1] || (year + 1);
       if (!yearGroups[nextYear]) yearGroups[nextYear] = [];
-      yearGroups[nextYear].unshift(moveCourse); // 先頭に追加
+      yearGroups[nextYear].unshift(moveCourse);
       totalCredits -= moveCourse.credits || 0;
     }
   }
