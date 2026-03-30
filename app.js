@@ -196,7 +196,29 @@ function renderSelectedCoursesList() {
     yearGroups[year].push(course);
   });
   // 年次ごとの単位数が36を超えていたら超過分を次の年次へ移動
-  // ただし区分9（教職に関する科目）は配当年次固定で繰り越し対象外
+  // 以下の科目は配当年次固定（繰り越し対象外）：
+  //   ・常時固定：全必修科目（getRequiredIds()）
+  //   ・教職フラグON時の追加固定：区分9 ＋ 指定科目
+  const ALWAYS_FIXED_IDS = new Set(getRequiredIds());
+  const TEACHING_FIXED_IDS = new Set([
+    // 区分9は category で判定するため個別列挙不要
+    // 以下は教職フラグON時に追加固定する科目
+    'C034','C042',           // 文書作成演習Ⅰ・Ⅱ
+    'C038','C039','C040','C081', // メディア論・Webビジネス研究・経営学概論・マーケティング論
+    'C182','C183','C184','C185', // 基礎演習Ａ〜Ｄ
+    'C186','C187',           // ゼミナールＡ・Ｂ
+    'C188','C189'            // 卒業研究Ａ・Ｂ
+  ]);
+
+  function isFixed(course) {
+    if (ALWAYS_FIXED_IDS.has(course.id)) return true;
+    if (userAnswers.teaching) {
+      if (String(course.category) === '9') return true;
+      if (TEACHING_FIXED_IDS.has(course.id)) return true;
+    }
+    return false;
+  }
+
   const maxCreditsPerYear = 36;
   const sortedYears = Object.keys(yearGroups).map(Number).sort((a, b) => a - b);
   for (let i = 0; i < sortedYears.length; i++) {
@@ -204,11 +226,10 @@ function renderSelectedCoursesList() {
     let courses = yearGroups[year];
     let totalCredits = courses.reduce((sum, c) => sum + (c.credits || 0), 0);
     while (totalCredits > maxCreditsPerYear) {
-      // 超過分を次の年次へ移動
-      // 区分9（教職科目）は繰り越し対象外なので末尾から「区分9以外」を探す
+      // 固定科目を除いた末尾から繰り越す
       let moveIdx = -1;
       for (let j = courses.length - 1; j >= 0; j--) {
-        if (String(courses[j].category) !== '9') { moveIdx = j; break; }
+        if (!isFixed(courses[j])) { moveIdx = j; break; }
       }
       if (moveIdx === -1) break; // 繰り越せる科目が存在しない
       const moveCourse = courses.splice(moveIdx, 1)[0];
