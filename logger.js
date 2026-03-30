@@ -24,15 +24,28 @@ const AppLogger = (() => {
     }
   }
 
+  // クライアントのパブリックIPを取得（ipify.org利用、失敗時は空文字）
+  async function getClientIP() {
+    try {
+      const res = await fetch('https://api.ipify.org?format=json');
+      const json = await res.json();
+      return json.ip || '';
+    } catch {
+      return '';
+    }
+  }
+
   /**
    * Q4回答時の初回ログ（新規行として追記し、rowIdをセッションキャッシュに保存）
    */
   async function writeInitial(entry) {
     try {
+      const ip = await getClientIP();
       const logs = load();
       const logEntry = {
         timestamp: new Date().toISOString(),
         browser:   navigator.userAgent,
+        ip:        ip,
         event:     'q4_answered',
         ...entry
       };

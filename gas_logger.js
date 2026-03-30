@@ -37,8 +37,8 @@ function doPost(e) {
     const jstDate = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000);
     const jstStr  = Utilities.formatDate(jstDate, 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
 
-    // IPアドレス取得
-    const ip = e.parameter && e.parameter.userIp ? e.parameter.userIp : '';
+    // IPアドレス（クライアントJSから送信されたもの）
+    const ip = data.ip || '';
 
     // モード判定：rowId があれば上書き更新、なければ新規追記
     if (data.rowId) {
