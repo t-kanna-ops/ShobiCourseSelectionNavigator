@@ -5,7 +5,7 @@ const AppLogger = (() => {
   const STORAGE_KEY  = 'shobi_ai_prompt_logs';
   const MAX_ENTRIES  = 500;
   // Google Apps Script WebアプリURLをデプロイ後にここへ設定する
-  const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxpCccbkxMoxUPXHSE3fOLVifS8jN9MiNxEF3MFPB1wGpN-LE_SJEsYFfRNFHjBX3M/exec';
+  const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbx98LVRe5BrfHXdZaEiee-mZ-0ZOMB0kDp6CTIcsi-SIkTEUGIVUEMTjf7ootuXruKytA/exec';
 
   /**
    * ログエントリを1件追記する（localStorage保存 + GAS送信）
