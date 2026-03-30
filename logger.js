@@ -2,89 +2,124 @@
 // AI APIへの送信ログを localStorage に蓄積し、Google スプレッドシートにも送信する
 
 const AppLogger = (() => {
-  const STORAGE_KEY  = 'shobi_ai_prompt_logs';
-  const MAX_ENTRIES  = 500;
-  // Google Apps Script WebアプリURLをデプロイ後にここへ設定する
-  const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbx98LVRe5BrfHXdZaEiee-mZ-0ZOMB0kDp6CTIcsi-SIkTEUGIVUEMTjf7ootuXruKytA/exec';
+  const STORAGE_KEY    = 'shobi_ai_prompt_logs';
+  const SESSION_ROW_KEY = 'shobi_log_session_rowid'; // セッション中の行IDキャッシュ
+  const MAX_ENTRIES    = 500;
+  const GAS_ENDPOINT   = 'https://script.google.com/macros/s/AKfycbx98LVRe5BrfHXdZaEiee-mZ-0ZOMB0kDp6CTIcsi-SIkTEUGIVUEMTjf7ootuXruKytA/exec';
+
+  // GASへPOSTし、レスポンスのrowIdを返す（失敗時はnull）
+  async function postToGAS(payload) {
+    if (!GAS_ENDPOINT || GAS_ENDPOINT.startsWith('YOUR_')) return null;
+    try {
+      const res = await fetch(GAS_ENDPOINT, {
+        method:  'POST',
+        headers: { 'Content-Type': 'text/plain' }, // GAS CORS対策: text/plainはプリフライト不要
+        body:    JSON.stringify(payload)
+      });
+      const json = await res.json();
+      return json.rowId || null;
+    } catch (e) {
+      console.warn('[AppLogger] GAS送信失敗:', e);
+      return null;
+    }
+  }
 
   /**
-   * ログエントリを1件追記する（localStorage保存 + GAS送信）
+   * Q4回答時の初回ログ（新規行として追記し、rowIdをセッションキャッシュに保存）
    */
-  function write(entry) {
+  async function writeInitial(entry) {
     try {
       const logs = load();
       const logEntry = {
         timestamp: new Date().toISOString(),
         browser:   navigator.userAgent,
+        event:     'q4_answered',
         ...entry
       };
       logs.push(logEntry);
-      if (logs.length > MAX_ENTRIES) {
-        logs.splice(0, logs.length - MAX_ENTRIES);
-      }
+      if (logs.length > MAX_ENTRIES) logs.splice(0, logs.length - MAX_ENTRIES);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
 
-      // GASへ非同期送信（失敗してもローカル保存には影響しない）
-      if (GAS_ENDPOINT && !GAS_ENDPOINT.startsWith('YOUR_')) {
-        fetch(GAS_ENDPOINT, {
-          method:  'POST',
-          mode:    'no-cors', // GAS CORS対策
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify(logEntry)
-        }).catch(() => {});
+      // GASへ送信し、返ってきたrowIdをセッションストレージにキャッシュ
+      const rowId = await postToGAS(logEntry);
+      if (rowId) {
+        sessionStorage.setItem(SESSION_ROW_KEY, String(rowId));
       }
+    } catch (e) {
+      console.warn('[AppLogger] writeInitial失敗:', e);
+    }
+  }
+
+  /**
+   * AIレスポンス受信時の上書き更新（セッションキャッシュのrowIdで同一行を更新）
+   */
+  async function updateWithAI(aiReply) {
+    try {
+      const rowId = sessionStorage.getItem(SESSION_ROW_KEY);
+      const payload = {
+        event:   'ai_response_received',
+        aiReply: aiReply,
+        rowId:   rowId ? parseInt(rowId, 10) : null
+      };
+
+      if (rowId) {
+        await postToGAS(payload);
+        sessionStorage.removeItem(SESSION_ROW_KEY); // 使用済みキャッシュをクリア
+      } else {
+        // rowIdがない場合は通常のwrite（フォールバック）
+        await postToGAS({ ...payload, timestamp: new Date().toISOString(), browser: navigator.userAgent });
+      }
+
+      // localStorageの最新エントリにもaiReplyを追記
+      const logs = load();
+      if (logs.length > 0) {
+        const last = logs[logs.length - 1];
+        if (!last.aiReply) {
+          last.aiReply = aiReply;
+          last.event   = 'ai_response_received';
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+        }
+      }
+    } catch (e) {
+      console.warn('[AppLogger] updateWithAI失敗:', e);
+    }
+  }
+
+  /**
+   * 全ログを取得する（後方互換用のwrite関数も維持）
+   */
+  function write(entry) {
+    try {
+      const logs = load();
+      const logEntry = { timestamp: new Date().toISOString(), browser: navigator.userAgent, ...entry };
+      logs.push(logEntry);
+      if (logs.length > MAX_ENTRIES) logs.splice(0, logs.length - MAX_ENTRIES);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+      postToGAS(logEntry);
     } catch (e) {
       console.warn('[AppLogger] ログ書き込み失敗:', e);
     }
   }
 
-  /**
-   * 全ログを取得する
-   * @returns {Array}
-   */
   function load() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    } catch {
-      return [];
-    }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+    catch { return []; }
   }
 
-  /**
-   * ログをJSONファイルとしてダウンロードする
-   */
   function download() {
     const logs = load();
-    if (logs.length === 0) {
-      alert('ログがまだありません。');
-      return;
-    }
+    if (logs.length === 0) { alert('ログがまだありません。'); return; }
     const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     const date = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    a.href     = url;
-    a.download = `shobi_ai_log_${date}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    a.href = url; a.download = `shobi_ai_log_${date}.json`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
   }
 
-  /**
-   * ログを全件削除する
-   */
-  function clear() {
-    localStorage.removeItem(STORAGE_KEY);
-  }
+  function clear() { localStorage.removeItem(STORAGE_KEY); }
+  function count() { return load().length; }
 
-  /**
-   * 件数を返す
-   * @returns {number}
-   */
-  function count() {
-    return load().length;
-  }
-
-  return { write, load, download, clear, count };
+  return { write, writeInitial, updateWithAI, load, download, clear, count };
 })();

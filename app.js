@@ -767,6 +767,17 @@ function showDiagnosisStep() {
           if (q4Weights[idx] !== undefined) profile.push({ key, weight: q4Weights[idx], q: 'q4' });
         });
       }
+      // Q4回答完了時点で初回ログを記録（GASに新規行追加、rowIdをキャッシュ）
+      if (typeof AppLogger !== 'undefined') {
+        AppLogger.writeInitial({
+          answers: {
+            q1: userAnswers.q1 || [],
+            q2: userAnswers.q2 || [],
+            q3: userAnswers.q3 || [],
+            q4: userAnswers.q4 || []
+          }
+        });
+      }
       // Q3はdpだがclass.csvには直接使わないので除外
       showMainApp();
       setTimeout(()=>renderClassRecommendationAreaByProfile(profile), 100);
@@ -1442,20 +1453,9 @@ async function renderAIAnalysis() {
     // APIリターンは data.reply で受ける
     if (data.reply) {
       resultDiv.innerHTML = `<div style='white-space:pre-line;'>${data.reply}</div>`;
-      // ログ保存（レスポンス受信時に記録）
+      // AIレスポンス受信時：同一行をrowIdで上書き更新
       if (typeof AppLogger !== 'undefined') {
-        AppLogger.write({
-          event:     'ai_response_received',
-          answers:   {
-            q1: userAnswers.q1 || [],
-            q2: userAnswers.q2 || [],
-            q3: userAnswers.q3 || [],
-            q4: userAnswers.q4 || []
-          },
-          dpRate:    dpRate,
-          specialty: specialty,
-          aiReply:   data.reply
-        });
+        AppLogger.updateWithAI(data.reply);
       }
     } else {
       resultDiv.innerHTML = `<div style='color:red;'>AI分析の取得に失敗しました。${data.error ? `<br>${data.error}` : ''}</div>`;
