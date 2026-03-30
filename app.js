@@ -133,12 +133,12 @@ async function renderTeacherRankingByProfile(profile) {
       : 50;
   });
 
-  // 全員を表示（上位5名ではなく全25名）
+  // 全員を表示（上位10名）
   let html = '';
   if (results.length === 0) {
     html = `<div style='color:#aaa;'>（マッチする先生が見つかりませんでした）</div>`;
   } else {
-    html = results.map((r, idx) => {
+    html = results.slice(0, 10).map((r, idx) => {
       const tagHtml = r.attrs.map(a => `<span style='display:inline-block;background:#0d2040;border:1px solid #30363d;border-radius:4px;padding:0.1em 0.5em;margin:0.1em;font-size:0.82em;color:#aad4ff;'>${a}</span>`).join('');
       return `<div style='margin-bottom:1.2em;padding:1em 1.2em;background:#333;border-radius:10px;box-shadow:0 0 8px #00bfff;'>
         <div style='font-size:1.1em;font-weight:bold;'>${idx + 1}位：<span style='color:#00ff99;'>${r.teacher}</span></div>
@@ -249,7 +249,7 @@ function showTutorial() {
     {
       title: '👋 ようこそ！履修科目選択アシスタント',
       body: `<p>このツールは、あなたの<strong>興味・関心・目標</strong>に合わせて、履修すべき科目をAIが提案するアシスタントです。</p>
-<p style="margin-top:0.8em;">初めて使う方のために、かんたんな使い方を説明します。<br>右下の「スキップ」を押すといつでも終了できます。</p>`
+<p style="margin-top:0.8em;">初めて使う方のために、かんたんな使い方を説明します。<br>左下の「スキップ」を押すといつでも終了できます。</p>`
     },
     {
       title: '📋 全体の流れ',
@@ -263,7 +263,7 @@ function showTutorial() {
     },
     {
       title: '🎵 Q1：興味のある分野を選ぼう',
-      body: `<p>音楽・舞台・エンタメなど、<strong>あなたが興味を持っている分野</strong>を最大5つ、優先順位をつけて選びます。</p>
+      body: `<p>音楽・舞台・エンタメなど、<strong>あなたが興味を持っている分野</strong>を最大5つ、優先順位をつけて選びます。たくさん選べば選ぶほど、優先順位は曖昧になりますので、特に優先したい分野がある場合は1つだけ選んでください。</p>
 <p style="margin-top:0.8em;color:#ffd700;">⭐ 1位に選んだ分野が最も強く反映されます。迷ったら直感で選んでOKです。</p>`
     },
     {
@@ -274,11 +274,11 @@ function showTutorial() {
     {
       title: '💪 Q3：身につけたい力を選ぼう',
       body: `<p>DP（ディプロマ・ポリシー）に沿った<strong>20の能力指標</strong>の中から、特に伸ばしたいものを最大5つ選びます。</p>
-<p style="margin-top:0.8em;color:#00ff99;">これがレーダーチャートに反映され、バランスよく単位を積むためのヒントになります。</p>`
+<p style="margin-top:0.8em;color:#00ff99;">これがレーダーチャートに反映され、「こうなりたい！」と思う理想の自分に合わせて単位を積むためのヒントになります。</p>`
     },
     {
       title: '🎸 Q4：楽器・専攻を選ぼう',
-      body: `<p>演奏したい・専攻している楽器を最大2つ選びます。専攻楽器に関連した実技科目が優先的に表示されます。</p>
+      body: `<p>演奏したい、あるいは演奏経験がある楽器を選びます。専攻楽器に関連した実技科目が優先的に表示されます。</p>
 <p style="margin-top:0.8em;color:#aaa;">楽器が特にない場合は選ばずに次へ進んでください。</p>`
     },
     {
@@ -440,7 +440,8 @@ function showMainApp() {
         updateSelectedCreditInfo();
         return;
       }
-      // 「おすすめ科目自動選択」モード：100単位分おすすめ科目をselectedCoursesに反映
+      // 「おすすめ科目自動選択」モード：教職フラグに応じた上限単位数で選択
+      const maxCredits = userAnswers.teaching ? 143 : 100;
       const recommended = courseData
         .filter(c => c.isRecommended)
         .sort((a, b) => b._recommendPercent - a._recommendPercent);
@@ -452,14 +453,14 @@ function showMainApp() {
       autoSelectedIds = [];
       let pool = [...recommended];
       for (const c of pool) {
-        if (!selectedCourses.includes(c.id) && totalCredits + c.credits <= 100) {
+        if (!selectedCourses.includes(c.id) && totalCredits + c.credits <= maxCredits) {
           selectedCourses.push(c.id);
           autoSelectedIds.push(c.id);
           totalCredits += c.credits;
         }
       }
-      if (totalCredits > 100) {
-        let over = totalCredits - 100;
+      if (totalCredits > maxCredits) {
+        let over = totalCredits - maxCredits;
         let removable = selectedCourses.filter(id => !getRequiredIds().includes(id));
         while (over > 0 && removable.length > 0) {
           const idx = Math.floor(Math.random() * removable.length);
