@@ -505,7 +505,7 @@ function showMainApp() {
   const main = document.getElementById("main-area");
   main.innerHTML = `
     <div id="reference-area" style="margin-bottom:1em;">
-      <button id="reference-btn" class="cyberpunk-btn" style="background:#00bfff;color:#fff;">参考資料：履修モデル一覧</button>
+      <button id="reference-btn" class="cyberpunk-btn" style="background:#00bfff;color:#fff;">参考資料：履修モデル一覧</button> ${hint('傾向ごとの履修モデルです。推奨する先生の記載があるものは、先生の名前も表記しています。履修計画の参考にしてください。')}
     </div>
     <section id="your-answers-section" style="margin-bottom:1.5em;padding:1.2em 1.5em;background:#1a2233;border-radius:12px;border:1px solid #00bfff44;">
       <h2 style="margin-bottom:0.8em;">あなたが選んだのは… ${hint('Q1〜Q4で回答した内容をもとに、あなたの興味・やりたいこと・身につけたい力・楽器を表示しています。')}</h2>
@@ -520,7 +520,7 @@ function showMainApp() {
       <div id="course-list"></div>
     </section>
     <section id="summary-section">
-      <h2>履修バランス ${hint('選択した科目のDP（ディプロマ・ポリシー）獲得状況をレーダーチャートで示しています。バランスよく広がるほど多角的な学びになります。')}</h2>
+      <h2>履修バランス ${hint('選択した科目のDP（ディプロマ・ポリシー）獲得状況をレーダーチャートで示しています。自分の理想に合わせた学びになるかどうか、目で見て確認できます。')}</h2>
       <canvas id="dpRadarChart" width="400" height="400"></canvas>
       <div style="display:flex;gap:2em;justify-content:center;margin:1.5em 0;">
         <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:1em;padding-bottom:1em;min-width:200px;">
