@@ -876,7 +876,7 @@ function renderCharts() {
   });
   const creditSum = selected.reduce((sum, c) => sum + c.credits, 0);
   const creditSummary = document.getElementById("credit-summary");
-  creditSummary.innerHTML = `選択中の合計単位: <strong>${creditSum}</strong> / 100単位`;
+  creditSummary.innerHTML = `選択中の合計単位: <strong>${creditSum}</strong> / ${userAnswers.teaching ? 143 : 100}単位`;
 }
 
       function recommendCourses() {
@@ -941,7 +941,7 @@ function renderCharts() {
         sorted.forEach(course => {
           course._recommendPercent = maxScore ? Math.round((course._score / maxScore) * 100) : 0;
         });
-        // 100単位分おすすめ抽出
+        // 教職フラグに応じた上限単位分おすすめ抽出
         sorted.sort((a,b) => b._score - a._score);
         let totalCredits = 0;
         courseData.forEach(c => { delete c.isRecommended; });
