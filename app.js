@@ -463,7 +463,13 @@ const teachingRequiredIds = [
   "C124", // 教職ピアノⅢ
   "C125", // 教職ピアノⅣ
   "C102", // 教職合奏Ａ
-  "C103"  // 教職合奏Ｂ
+  "C103", // 教職合奏Ｂ
+  // 区分9 教職に関する科目（全件）
+  "C190", "C191", "C192", "C193", "C194",
+  "C195", "C196", "C197", "C198", "C199",
+  "C200", "C201", "C202", "C203", "C204",
+  "C205", "C206", "C207", "C208", "C209",
+  "C210", "C211", "C212", "C213", "C214"
 ];
 // 現在の必修 IDリスト（教職フラグを考慮）を返す
 function getRequiredIds() {
@@ -1049,8 +1055,11 @@ function renderCharts() {
       function renderCourseList() {
         const container = document.getElementById("course-list");
         container.innerHTML = "";
-        // 区分ごとに分けて、区分番号順・区分内五十音順で表示
-        const courses = courseData.filter(c => !c.isTeaching);
+        // 教職フラグがオップのときは区分9（教職科目）も表示、オフのときは非表示
+        const courses = courseData.filter(c => {
+          if (String(c.category) === '9') return userAnswers.teaching;
+          return !c.isTeaching;
+        });
         // 区分ごとにグループ化
         const group = {};
         courses.forEach(c => {
