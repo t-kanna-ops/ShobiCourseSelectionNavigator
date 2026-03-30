@@ -949,7 +949,7 @@ function showDiagnosisStep() {
     };
   } else if (diagnosisStep === 4) {
     main.innerHTML = `<div class="cyberpunk-init">
-      <div class="ai-message">Q4. 演奏経験がある、もしくは演奏できるようになりたい楽器は？<br>（当てはまるものをすべて選択。なければそのまま「次へ」）</div>
+      <div class="ai-message">Q4. 演奏経験があり、専門的に学びたいと思う楽器は？<br>（当てはまるものをすべて選択。なければそのまま「次へ」）</div>
       <form id="q4-form">
         ${[
           {key: "keyboard", label: "キーボード・ピアノ"},
@@ -1008,7 +1008,7 @@ function showDiagnosisStep() {
       // Q1: domains, Q2: fields, Q3: dp, Q4: instrument
       // 選択順による個別重み配列
       const q1Weights = [1.00, 0.50, 0.30, 0.20]; // 4番目以降は0.20固定
-      const q2Weights = [0.80, 0.32, 0.24];
+      const q2Weights = [1.00, 0.50, 0.30];
       const q4Weights = [2.00, 1.00];
       const profile = [];
       // Q1: domains
