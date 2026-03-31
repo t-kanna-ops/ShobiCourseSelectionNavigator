@@ -69,6 +69,18 @@ async function renderClassRecommendationAreaByProfile(profile) {
       : 50;
   });
   const top5 = results.slice(0,5);
+  // kyoin.csv から教員URL取得
+  let teacherUrlMap = {};
+  try {
+    const kyoinRes = await fetch('kyoin.csv');
+    if (kyoinRes.ok) {
+      const kyoinCsv = await kyoinRes.text();
+      kyoinCsv.split(/\r?\n/).filter(l => l.trim()).forEach(l => {
+        const c = l.split(',');
+        if (c.length >= 6) teacherUrlMap[c[0].trim()] = c[5].trim();
+      });
+    }
+  } catch(e) {}
   let html = '';
   if (top5.length === 0) {
     html = `<div style='color:#aaa;'>（マッチするクラスが見つかりませんでした）</div>`;
@@ -76,7 +88,7 @@ async function renderClassRecommendationAreaByProfile(profile) {
     html = top5.map((r,idx)=>{
       return `<div style='margin-bottom:1.2em;padding:1em 1.2em;background:#333;border-radius:10px;box-shadow:0 0 8px #00ff99;'>
         <div style='font-size:1.1em;font-weight:bold;'>${idx+1}位：${r.className}</div>
-        <div>教員: <span style='color:#00ff99;'>${r.teacher}</span></div>
+        <div>教員: <span style='color:#00ff99;'>${teacherUrlMap[r.teacher] ? `<a href='${teacherUrlMap[r.teacher]}' target='_blank' style='color:#00ff99;text-decoration:underline;'>${r.teacher}</a>` : r.teacher}</span></div>
         <div style='margin-top:0.5em;'><span style='color:#ffd700;font-weight:bold;'>マッチ度 ${r.percent}%</span>　<a href='https://cps-portal.shobi-u.ac.jp/cpsmart/public/dashboard/main/ja/simple/1900/3000280/wsl/SyllabusSansho?kogiCd=${r.code}' target='_blank' style='color:#00bfff;text-decoration:underline;'>シラバスを見る</a></div>
       </div>`;
     }).join('');
@@ -140,7 +152,8 @@ async function renderTeacherRankingByProfile(profile) {
         score -= 1.00;
       }
     });
-    return { teacher, attrs, score };
+    const url = cols[5]?.trim() || '';
+    return { teacher, attrs, score, url };
   }).filter(Boolean);
 
   results.sort((a, b) => b.score - a.score);
@@ -163,7 +176,7 @@ async function renderTeacherRankingByProfile(profile) {
       results.slice(0, 10).map((r, idx) =>
         `<tr style='border-bottom:1px solid #444;'>
           <td style='padding:0.5em 0.8em;color:#aaa;white-space:nowrap;'>${idx + 1}位</td>
-          <td style='padding:0.5em 0.8em;font-weight:bold;color:#00ff99;'>${r.teacher}</td>
+          <td style='padding:0.5em 0.8em;font-weight:bold;color:#00ff99;'>${r.url ? `<a href='${r.url}' target='_blank' style='color:#00ff99;text-decoration:underline;'>${r.teacher}</a>` : r.teacher}</td>
           <td style='padding:0.5em 0.8em;color:#ffd700;white-space:nowrap;'>マッチ度 ${r.percent}%</td>
         </tr>`
       ).join('') +
