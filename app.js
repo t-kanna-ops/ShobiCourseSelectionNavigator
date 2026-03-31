@@ -1236,7 +1236,7 @@ function renderCharts() {
   });
   const creditSum = selected.reduce((sum, c) => sum + c.credits, 0);
   const creditSummary = document.getElementById("credit-summary");
-  creditSummary.innerHTML = `選択中の合計単位: <strong>${creditSum}</strong> / ${userAnswers.teaching ? 143 : 100}単位`;
+  creditSummary.innerHTML = `選択中の合計単位: <strong>${creditSum}</strong> / ${userAnswers.teaching ? 143 : 100}単位＋教養科目24単位`;
 }
 
       function recommendCourses() {
@@ -1552,7 +1552,7 @@ function updateSelectedCreditInfo() {
   }, 0);
   const creditDiv = document.getElementById('selected-credit-info');
   if (creditDiv) {
-    creditDiv.textContent = `${n}/${userAnswers.teaching ? 143 : 100}`;
+    creditDiv.textContent = `${n}/${userAnswers.teaching ? 143 : 100}＋教養科目24単位`;
   }
 }
 function renderPieCharts() {
