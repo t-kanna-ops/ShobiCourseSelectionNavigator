@@ -57,9 +57,9 @@
 
     /* ─── Log table ─── */
     .table-wrap { padding: 0 2em; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.78em; }
-    th { background: #161b22; color: #58a6ff; padding: 0.5em 0.7em; text-align: left; border-bottom: 1px solid #30363d; position: sticky; top: 0; white-space: nowrap; z-index: 1; }
-    td { padding: 0.45em 0.7em; border-bottom: 1px solid #21262d; vertical-align: top; word-break: break-all; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.78em; table-layout: fixed; }
+    th { background: #161b22; color: #58a6ff; padding: 0.5em 0.7em; text-align: left; border-bottom: 1px solid #30363d; position: sticky; top: 0; white-space: nowrap; z-index: 1; overflow: hidden; }
+    td { padding: 0.45em 0.7em; border-bottom: 1px solid #21262d; vertical-align: top; word-break: break-word; overflow-wrap: break-word; overflow: hidden; }
     tr:hover td { background: #161b22; }
     .tag { display: inline-block; background: #0d2040; border: 1px solid #30363d; border-radius: 4px; padding: 0.1em 0.4em; margin: 0.1em; font-size: 0.85em; white-space: nowrap; }
     #no-log { color: #8b949e; text-align: center; padding: 3em; }
@@ -462,15 +462,22 @@
               <b style="color:#8b949e;font-size:0.75em;">Q2</b> ${q2}<br>
               <b style="color:#8b949e;font-size:0.75em;">Q3</b> ${q3}<br>
               <b style="color:#8b949e;font-size:0.75em;">Q4</b> ${q4}</td>
-          <td style="color:#8b949e;max-width:160px;">${dp}</td>
-          <td style="color:#8b949e;max-width:180px;">${sp}</td>
-          <td style="color:#c9d1d9;max-width:300px;">${l.aiReply||'<span style="color:#555">未取得</span>'}</td>
+          <td style="color:#8b949e;">${dp}</td>
+          <td style="color:#8b949e;">${sp}</td>
+          <td style="color:#c9d1d9;">${l.aiReply||'<span style="color:#555">未取得</span>'}</td>
           <td style="color:#555;">${getBrowserName(l.browser)} / ${getDeviceType(l.browser)}</td>
         </tr>`;
       }).join('');
 
-      area.innerHTML = `<table>
-        <thead><tr>
+      area.innerHTML = `<table>        <colgroup>
+          <col style="width:6%">
+          <col style="width:4%">
+          <col style="width:20%">
+          <col style="width:15%">
+          <col style="width:16%">
+          <col style="width:23%">
+          <col style="width:16%">
+        </colgroup>        <thead><tr>
           <th>日時</th><th>IP</th><th>選択内容 (Q1〜Q4)</th>
           <th>DP獲得率</th><th>専門性・領域</th><th>AIコメント</th><th>ブラウザ/端末</th>
         </tr></thead>
