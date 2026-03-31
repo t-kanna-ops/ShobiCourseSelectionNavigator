@@ -97,28 +97,19 @@
   <div class="charts-grid charts-grid-4">
     <div class="chart-card">
       <h3>Q1 興味のある分野</h3>
-      <div class="chart-wrap"><canvas id="chartQ1"></canvas></div>
-      <div class="legend" id="legendQ1"></div>
+      <div class="chart-wrap-bar"><canvas id="chartQ1"></canvas></div>
     </div>
     <div class="chart-card">
       <h3>Q2 やりたいこと</h3>
-      <div class="chart-wrap"><canvas id="chartQ2"></canvas></div>
-      <div class="legend" id="legendQ2"></div>
+      <div class="chart-wrap-bar"><canvas id="chartQ2"></canvas></div>
     </div>
     <div class="chart-card">
       <h3>Q3 身につけたい力</h3>
-      <div class="chart-wrap"><canvas id="chartQ3"></canvas></div>
-      <div class="legend" id="legendQ3"></div>
+      <div class="chart-wrap-bar"><canvas id="chartQ3"></canvas></div>
     </div>
     <div class="chart-card">
       <h3>Q4 楽器・演奏形態</h3>
-      <div class="chart-wrap"><canvas id="chartQ4"></canvas></div>
-      <div class="legend" id="legendQ4"></div>
-    </div>
-  </div>
-
-  <!-- DP獲得率 -->
-  <div class="section-title" style="margin-top:1.2em;">DP獲得率の傾向（平均）</div>
+      <div class="chart-wrap-bar"><canvas id="chartQ4"></canvas></div>
   <div class="charts-grid charts-grid-1" style="padding-bottom:0;">
     <div class="chart-card">
       <h3>DP獲得率 平均値（分析対象ログ）</h3>
@@ -131,23 +122,19 @@
   <div class="charts-grid charts-grid-4" style="padding-bottom:1.2em;">
     <div class="chart-card">
       <h3>フィールド分布（専門性）</h3>
-      <div class="chart-wrap"><canvas id="chartField"></canvas></div>
-      <div class="legend" id="legendField"></div>
+      <div class="chart-wrap-bar"><canvas id="chartField"></canvas></div>
     </div>
     <div class="chart-card">
       <h3>領域分布</h3>
-      <div class="chart-wrap"><canvas id="chartDomain"></canvas></div>
-      <div class="legend" id="legendDomain"></div>
+      <div class="chart-wrap-bar"><canvas id="chartDomain"></canvas></div>
     </div>
     <div class="chart-card">
       <h3>ブラウザ統計</h3>
-      <div class="chart-wrap"><canvas id="chartBrowser"></canvas></div>
-      <div class="legend" id="legendBrowser"></div>
+      <div class="chart-wrap-bar"><canvas id="chartBrowser"></canvas></div>
     </div>
     <div class="chart-card">
       <h3>デバイス種別</h3>
-      <div class="chart-wrap"><canvas id="chartDevice"></canvas></div>
-      <div class="legend" id="legendDevice"></div>
+      <div class="chart-wrap-bar"><canvas id="chartDevice"></canvas></div>
     </div>
   </div>
 
@@ -273,27 +260,35 @@
       if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
     }
 
-    function renderDoughnut(canvasId, legendId, labels, data, colors) {
+    function renderDoughnut(canvasId, _legendId, labels, data) {
+      // すべて棒グラフに統一
+      renderBarCount(canvasId, labels, data);
+    }
+
+    function renderBarCount(canvasId, labels, data) {
       destroyChart(canvasId);
       const el = document.getElementById(canvasId);
       if (!el) return;
+      const bgColors = data.map((_, i) => PALETTE[i % PALETTE.length]);
       chartInstances[canvasId] = new Chart(el.getContext('2d'), {
-        type: 'doughnut',
-        data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: '#0d1117', borderWidth: 2 }] },
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ data, backgroundColor: bgColors, borderRadius: 4 }]
+        },
         options: {
+          indexAxis: 'y',
           plugins: {
             legend: { display: false },
-            tooltip: { callbacks: { label: c => ` ${c.label}: ${c.raw}件` } }
+            tooltip: { callbacks: { label: c => ` ${c.raw}件` } }
           },
-          cutout: '55%', responsive: true
+          scales: {
+            x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' }, beginAtZero: true },
+            y: { ticks: { color: '#c9d1d9', font: { size: 11 } }, grid: { color: '#21262d' } }
+          },
+          responsive: true
         }
       });
-      const leg = document.getElementById(legendId);
-      if (leg) {
-        leg.innerHTML = labels.map((l, i) =>
-          `<span class="legend-item"><span class="legend-dot" style="background:${colors[i % colors.length]}"></span>${l}: <b>${data[i]}</b></span>`
-        ).join('');
-      }
     }
 
     function renderBar(canvasId, labels, data) {
@@ -346,14 +341,13 @@
       const q3 = countOptions(logs, 'q3', Q3_MAP);
       const q4 = countOptions(logs, 'q4', Q4_MAP);
 
-      renderDoughnut('chartQ1','legendQ1', Object.keys(q1), Object.values(q1), PALETTE);
-      renderDoughnut('chartQ2','legendQ2', Object.keys(q2), Object.values(q2), ['#00ff99','#00bfff','#ffd700']);
-      renderDoughnut('chartQ3','legendQ3', Object.keys(q3), Object.values(q3), PALETTE);
+      renderBarCount('chartQ1', Object.keys(q1), Object.values(q1));
+      renderBarCount('chartQ2', Object.keys(q2), Object.values(q2));
+      renderBarCount('chartQ3', Object.keys(q3), Object.values(q3));
       // Q4「選択なし」集計
       const q4None = logs.filter(l => !((l.answers||{}).q4?.length)).length;
       if (q4None > 0) q4['選択なし'] = q4None;
-      const q4AllColors = ['#58a6ff','#ff66cc','#ffd700','#00ff99','#8b949e'];
-      renderDoughnut('chartQ4','legendQ4', Object.keys(q4), Object.values(q4), q4AllColors);
+      renderBarCount('chartQ4', Object.keys(q4), Object.values(q4));
     }
 
     // ========================
@@ -397,8 +391,8 @@
       const fAvgs   = fLabels.map(k => Math.round(fSum[k] / fCnt[k] * 10) / 10);
       const dLabels = Object.keys(dSum);
       const dAvgs   = dLabels.map(k => Math.round(dSum[k] / dCnt[k] * 10) / 10);
-      renderDoughnut('chartField', 'legendField', fLabels, fAvgs, ['#00bfff','#00ff99','#ffd700']);
-      renderDoughnut('chartDomain','legendDomain', dLabels, dAvgs, PALETTE);
+      renderBarCount('chartField', fLabels, fAvgs);
+      renderBarCount('chartDomain', dLabels, dAvgs);
     }
 
     // ========================
@@ -410,8 +404,8 @@
         const b = getBrowserName(l.browser); bCnt[b] = (bCnt[b] || 0) + 1;
         const d = getDeviceType(l.browser);  dCnt[d] = (dCnt[d] || 0) + 1;
       });
-      renderDoughnut('chartBrowser','legendBrowser', Object.keys(bCnt), Object.values(bCnt), PALETTE);
-      renderDoughnut('chartDevice', 'legendDevice',  Object.keys(dCnt), Object.values(dCnt), ['#00bfff','#00ff99','#ffd700','#ff66cc']);
+      renderBarCount('chartBrowser', Object.keys(bCnt), Object.values(bCnt));
+      renderBarCount('chartDevice',  Object.keys(dCnt), Object.values(dCnt));
     }
 
     // ========================
