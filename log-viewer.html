@@ -168,7 +168,7 @@
       entertainment:'エンタメ・総合芸術', it:'IT・先端技術'
     };
     const Q2_MAP = { create:'クリエイト・制作', performance:'パフォーマンス', business:'ビジネス' };
-    const Q3_MAP = { create:'クリエイト・制作', performance:'パフォーマンス', business:'ビジネス' };
+    const Q3_MAP = DP_LABELS; // Q3回答キーは "1-1"〜"4-3"（dpLabels準拠）
     const Q4_MAP = {
       keyboard:'キーボード・ピアノ', brass:'管楽器・パーカッション',
       ensemble:'バンドアンサンブル', vocal:'声楽・オペラ・ミュージカル'
@@ -348,8 +348,12 @@
 
       renderDoughnut('chartQ1','legendQ1', Object.keys(q1), Object.values(q1), PALETTE);
       renderDoughnut('chartQ2','legendQ2', Object.keys(q2), Object.values(q2), ['#00ff99','#00bfff','#ffd700']);
-      renderDoughnut('chartQ3','legendQ3', Object.keys(q3), Object.values(q3), ['#00ff99','#00bfff','#ffd700']);
-      renderDoughnut('chartQ4','legendQ4', Object.keys(q4), Object.values(q4), ['#58a6ff','#ff66cc','#ffd700','#00ff99']);
+      renderDoughnut('chartQ3','legendQ3', Object.keys(q3), Object.values(q3), PALETTE);
+      // Q4「選択なし」集計
+      const q4None = logs.filter(l => !((l.answers||{}).q4?.length)).length;
+      if (q4None > 0) q4['選択なし'] = q4None;
+      const q4AllColors = ['#58a6ff','#ff66cc','#ffd700','#00ff99','#8b949e'];
+      renderDoughnut('chartQ4','legendQ4', Object.keys(q4), Object.values(q4), q4AllColors);
     }
 
     // ========================
