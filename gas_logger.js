@@ -6,11 +6,70 @@
 const SPREADSHEET_ID = '105WpyGuwkkIbCnSf5f0yJZbNlqgqvmhZMYfD8lLD9jY';
 const SHEET_NAME     = 'logs';
 
-// CORSプリフライト対応
-function doGet(e) {
+// JSON レスポンスヘルパー
+function jsonResponse(data) {
   return ContentService
-    .createTextOutput(JSON.stringify({ status: 'ok' }))
+    .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// カンマ区切り文字列を配列に分割（空文字・"なし" は空配列）
+function splitAnswer(val) {
+  const s = (val || '').toString().trim();
+  if (!s || s === 'なし') return [];
+  return s.split(',').map(v => v.trim()).filter(Boolean);
+}
+
+// GETリクエスト
+// ?action=getLogs でスプレッドシートの全ログをJSON配列で返す
+function doGet(e) {
+  const action = (e && e.parameter && e.parameter.action) || '';
+
+  if (action === 'getLogs') {
+    try {
+      const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+      const sheet = ss.getSheetByName(SHEET_NAME);
+      if (!sheet) return jsonResponse([]);
+
+      const rows = sheet.getDataRange().getValues();
+      if (rows.length <= 1) return jsonResponse([]); // ヘッダーのみ
+
+      const logs = rows.slice(1).map(row => {
+        // Col0: タイムスタンプ（Date or string）→ ISO-like JST 文字列
+        const ts  = row[0];
+        const timestamp = (ts instanceof Date)
+          ? Utilities.formatDate(ts, 'Asia/Tokyo', "yyyy-MM-dd'T'HH:mm:ss")
+          : (ts || '').toString();
+
+        // Col8: specialty は " / 分野:" で改行を復元
+        const specialty = (row[8] || '').toString()
+          .replace(/\s*\/\s*分野:/, '\n分野:');
+
+        return {
+          timestamp,
+          event:     (row[1]  || '').toString(),
+          ip:        (row[2]  || '').toString(),
+          answers: {
+            q1: splitAnswer(row[3]),
+            q2: splitAnswer(row[4]),
+            q3: splitAnswer(row[5]),
+            q4: splitAnswer(row[6])   // "なし" → []
+          },
+          dpRate:    (row[7]  || '').toString(),
+          specialty,
+          aiReply:   (row[9]  || '').toString(),
+          browser:   (row[10] || '').toString()
+        };
+      });
+
+      return jsonResponse(logs);
+    } catch (err) {
+      return jsonResponse({ error: err.toString() });
+    }
+  }
+
+  // デフォルト（疎通確認用）
+  return jsonResponse({ status: 'ok' });
 }
 
 function doPost(e) {

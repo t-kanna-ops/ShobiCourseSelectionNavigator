@@ -79,13 +79,13 @@
   </div>
 
   <div class="controls">
-    <button class="btn-ref"    onclick="reload()">更新</button>
+    <button class="btn-ref"    onclick="reload()">GAS再取得</button>
     <button class="btn-dedup active" id="btn-dedup" onclick="toggleDedup()">重複IP除去 ON</button>
     <button class="btn-import" onclick="document.getElementById('file-input').click()">JSONインポート</button>
     <button class="btn-dl"     onclick="downloadLog()">JSONダウンロード</button>
-    <button class="btn-clear"  onclick="clearLog()">ログ削除</button>
     <input  id="filter" type="text" placeholder="キーワードで絞り込み..." oninput="renderTable()">
     <span   id="log-count"></span>
+    <span   id="data-source" style="font-size:0.82em;padding:0.3em 0.7em;border-radius:4px;background:#1f2d3d;color:#8b949e;border:1px solid #30363d;">読込中...</span>
     <input  id="file-input" type="file" accept=".json" onchange="importJSON(event)">
   </div>
 
@@ -181,18 +181,23 @@
       ensemble:'バンドアンサンブル', vocal:'声楽・オペラ・ミュージカル'
     };
     const PALETTE = ['#58a6ff','#00ff99','#ffd700','#00bfff','#ff66cc','#ff9966','#c9a0ff','#66ffcc','#ffcc00','#ff4466'];
+    const GAS_URL  = 'https://script.google.com/macros/s/AKfycbx98LVRe5BrfHXdZaEiee-mZ-0ZOMB0kDp6CTIcsi-SIkTEUGIVUEMTjf7ootuXruKytA/exec';
 
     // ========================
     //  状態
     // ========================
     let dedupEnabled = true;
-    let importedLogs = null;
+    let gasLogs      = null;  // GASから取得したログ
+    let importedLogs = null;  // JSONインポート分
 
     // ========================
     //  データ取得
     // ========================
     function getRawLogs() {
-      return importedLogs !== null ? importedLogs : AppLogger.load();
+      // 優先順: JSONインポート > GAS取得 > localStorage
+      if (importedLogs !== null) return importedLogs;
+      if (gasLogs      !== null) return gasLogs;
+      return AppLogger.load();
     }
 
     function getAnalysisLogs() {
@@ -209,11 +214,33 @@
     }
 
     // ========================
-    //  ユーティリティ
+    //  GASからログ取得
     // ========================
-    function toJST(isoStr) {
-      if (!isoStr) return '';
-      return new Date(isoStr).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false }).replace(/\//g, '-');
+    async function fetchFromGAS() {
+      const src = document.getElementById('data-source');
+      if (src) { src.textContent = '読込中...'; src.style.color = '#8b949e'; }
+      try {
+        const res  = await fetch(GAS_URL + '?action=getLogs');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          gasLogs = data;
+          if (src) { src.textContent = `GAS データ (${data.length}件)`; src.style.color = '#00ff99'; }
+        } else {
+          throw new Error(data.error || 'GASからの応答が不正です');
+        }
+      } catch(e) {
+        gasLogs = null;
+        if (src) { src.textContent = `GAS取得失敗—ローカルキャッシュを使用`; src.style.color = '#ffd700'; }
+        console.warn('[log-viewer] GAS取得失敗:', e);
+      }
+    }
+
+    // ========================
+    //  小きなユーティリティ
+    // ========================
+    function toJST(str) {
+      if (!str) return '';
+      return new Date(str).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false }).replace(/\//g, '-');
     }
 
     function getBrowserName(ua) {
@@ -488,6 +515,8 @@
     // ========================
     //  全体再描画
     // ========================
+    //  全体再描画
+    // ========================
     function renderAll() {
       const raw      = getRawLogs();
       const analysis = getAnalysisLogs();
@@ -502,7 +531,11 @@
     // ========================
     //  操作ハンドラ
     // ========================
-    function reload()      { importedLogs = null; renderAll(); }
+    async function reload() {
+      importedLogs = null;
+      await fetchFromGAS();
+      renderAll();
+    }
 
     function toggleDedup() {
       dedupEnabled = !dedupEnabled;
@@ -512,7 +545,17 @@
       renderAll();
     }
 
-    function downloadLog() { AppLogger.download(); }
+    function downloadLog() {
+      const logs = getRawLogs();
+      if (logs.length === 0) { alert('ログがありません。'); return; }
+      const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      const date = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      a.href = url; a.download = `shobi_log_${date}.json`;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
 
     function clearLog() {
       if (!confirm(`ログを全 ${AppLogger.count()} 件削除します。よろしいですか？`)) return;
@@ -530,6 +573,8 @@
           const data = JSON.parse(e.target.result);
           if (!Array.isArray(data)) { alert('無効なJSON形式です（配列で渡してください）'); return; }
           importedLogs = data;
+          const src = document.getElementById('data-source');
+          if (src) { src.textContent = `インポート (${data.length}件)`; src.style.color = '#00bfff'; }
           alert(`${data.length} 件のログをインポートしました。`);
           renderAll();
         } catch(err) {
@@ -541,9 +586,13 @@
     }
 
     // ========================
-    //  初期表示
+    //  初期起動
     // ========================
-    renderAll();
+    async function initApp() {
+      await fetchFromGAS();
+      renderAll();
+    }
+    initApp();
   </script>
 </body>
 </html>
