@@ -859,9 +859,9 @@ function showDiagnosisStep() {
         box.style.cssText = 'background:#1a2233;border:2px solid #ff6666;border-radius:12px;padding:1.8em 2em;max-width:480px;width:90%;color:#e0f0ff;font-size:0.92em;line-height:1.8;';
         box.innerHTML = `
           <div style="font-weight:bold;font-size:1.1em;color:#ff6666;margin-bottom:0.8em;">⚠️ 重要：教職履修の覚悟</div>
-          <p style="margin:0 0 1em;">教職課程では、卒業要件124単位に加え約43単位の追加修得が必要で、卒業要件内の一部科目も必修化されます。また教育実習は厳しい条件をクリアし、本気で教員を志す学生のみが対象です。</p>
-          <p style="margin:0 0 1em;">各学期の説明会出席は必須です。ガイドを熟読し、仕組みを完全に理解して臨んでください。理解不足は自身の時間を無駄にするだけでなく、実習先に多大な迷惑をかけます。</p>
-          <p style="margin:0 0 1.2em;font-weight:bold;color:#ffd700;">強い責任感と覚悟を持って選択してください。</p>
+          <p style="margin:0 0 1em;">教職課程では、卒業要件124単位に加え約43単位の追加修得が必要で、卒業要件内の基礎科目や実習科目の一部も必修になります。</p>
+          <p style="margin:0 0 1em;">ピアノや弾き歌い、ソルフェージュなどの専門的な力量が強く求められます。また教育実習は厳しい条件をクリアし、本気で教員を志す学生のみが対象です。</p>
+          <p style="margin:0 0 1.2em;font-weight:bold;color:#ffd700;">各学期の説明会出席は必須です。ガイドを熟読し、必ず予習をして臨んでください。理解不足は自身の時間を無駄にするだけでなく、実習先に多大な迷惑をかけます。強い責任感と覚悟を持って選択してください。</p>
           <div style="text-align:center;">
             <button id="teaching-notice-ok" class="cyberpunk-btn" style="min-width:120px;">確認</button>
           </div>
