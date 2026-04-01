@@ -1021,14 +1021,14 @@ function showDiagnosisStep() {
       diagnosisStep = 5;
       // Q1: domains, Q2: fields, Q3: dp, Q4: instrument
       // 選択順による個別重み配列
-      const q1Weights = [1.00, 0.50, 0.30, 0.20]; // 4番目以降は0.20固定
+      const q1Weights = [1.20, 0.60, 0.36, 0.24]; // 4番目以降は0.24固定（Q1重みを1.2倍）
       const q2Weights = [1.00, 0.50, 0.30];
       const q4Weights = [2.00, 1.00];
       const profile = [];
       // Q1: domains
       if (Array.isArray(userAnswers.q1)) {
         userAnswers.q1.forEach((key, idx) => {
-          profile.push({ key, weight: q1Weights[idx] ?? 0.20, q: 'q1' });
+          profile.push({ key, weight: q1Weights[idx] ?? 0.24, q: 'q1' });
         });
       }
       // Q2: fields（マイナス補正なし）
@@ -1293,7 +1293,7 @@ function renderCharts() {
           const q1Rate = userAnswers.q1.length ? q1Match / userAnswers.q1.length : 0;
           const q2Rate = userAnswers.q2.length ? q2Match / userAnswers.q2.length : 0;
           // Q3は合計値（レート反映済み）をそのまま使う
-          score = q1Rate * 0.4 + q2Rate * 0.3 + q3Match * 0.3;
+          score = q1Rate * 0.48 + q2Rate * 0.3 + q3Match * 0.3;
           course._score = score;
           if (score > maxScore) maxScore = score;
         });
