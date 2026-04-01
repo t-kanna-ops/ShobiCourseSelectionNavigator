@@ -49,10 +49,10 @@ async function renderClassRecommendationAreaByProfile(profile) {
         score -= (q === 'q4') ? 3.00 : weight;
       }
     });
-    // クラスが持つ属性のうちユーザーが選ばなかったものにペナルティ -1.00
-    attrs.forEach(attr => {
+    // クラスが持つ属性のうちユーザーが選ばなかったものにペナルティ -1.00（重複回数分）
+    Object.entries(attrCounts).forEach(([attr, count]) => {
       if (!profileKeys.has(attr)) {
-        score -= 1.00;
+        score -= 1.00 * count;
       }
     });
     return { code:cols[0], className:cols[1], teacher:cols[2], score };
@@ -146,10 +146,10 @@ async function renderTeacherRankingByProfile(profile) {
         score -= (q === 'q4') ? 3.00 : weight;
       }
     });
-    // 教員が持つ属性のうちユーザーが選ばなかったものにペナルティ -1.00
-    attrs.forEach(attr => {
+    // 教員が持つ属性のうちユーザーが選ばなかったものにペナルティ -1.00（重複回数分）
+    Object.entries(attrCounts).forEach(([attr, count]) => {
       if (!profileKeys.has(attr)) {
-        score -= 1.00;
+        score -= 1.00 * count;
       }
     });
     const url = cols[5]?.trim() || '';
