@@ -1251,6 +1251,16 @@ function renderCharts() {
           entertainment: c => c.domains.entertainment,
           it: c => c.domains.it
         };
+        // Q1/Q2選択セット
+        const q1Sel = new Set(userAnswers.q1 || []);
+        const q2Sel = new Set(userAnswers.q2 || []);
+        // Q1に直接対応するdomainキー
+        const q1DomainKeys = new Set(['pops','classic','sound','dance','act','vocal','entertainment','it']);
+        // music/stage: サブキーの選択数に応じてボーナス加算（ペナルティなし）
+        // 1つ選択→+3、2つ→+6、3つ→+10、0つ→0
+        const musicSubBonus = [0, 3, 6, 10][['pops','classic','sound'].filter(k => q1Sel.has(k)).length];
+        const stageSubBonus = [0, 3, 6, 10][['dance','act','vocal'].filter(k => q1Sel.has(k)).length];
+
         // Q4: 楽器フラグを持つ科目で、q4で一つも選択されていない楽器カテゴリは除外
         const q4Selected = userAnswers.q4 || [];
         const sorted = courseData.filter(c => {
@@ -1264,7 +1274,7 @@ function renderCharts() {
         let maxScore = 1;
         sorted.forEach(course => {
           let score = 0;
-          // Q1:分野（重み0.4）
+          // Q1:分野（重み0.48）
           let q1Match = 0;
           if (userAnswers.q1.length) {
             userAnswers.q1.forEach(domain => {
@@ -1289,20 +1299,43 @@ function renderCharts() {
               if (course.dp[dpkey]) q3Match += course.dp[dpkey] * q3Rates[idx];
             });
           }
-          // パーセンテージ化
+          // ベーススコア計算
           const q1Rate = userAnswers.q1.length ? q1Match / userAnswers.q1.length : 0;
           const q2Rate = userAnswers.q2.length ? q2Match / userAnswers.q2.length : 0;
-          // Q3は合計値（レート反映済み）をそのまま使う
           score = q1Rate * 0.48 + q2Rate * 0.3 + q3Match * 0.3;
           course._score = score;
           if (score > maxScore) maxScore = score;
+
+          // 属性値=1 補正（Q1/Q2のみ。Q3はペナルティ対象外）
+          // デフォルト全科目 +10、value=1の属性がQ1/Q2で未選択なら -10
+          // music: pops/classic/soundの選択数に応じてボーナス（0/+3/+6/+10）
+          // stage: dance/act/vocalの選択数に応じてボーナス（0/+3/+6/+10）
+          let adjust = 10;
+          Object.entries(course.domains).forEach(([key, val]) => {
+            if (val !== 1) return;
+            if (key === 'music') {
+              adjust += musicSubBonus;
+            } else if (key === 'stage') {
+              adjust += stageSubBonus;
+            } else if (q1DomainKeys.has(key)) {
+              if (!q1Sel.has(key)) adjust -= 10;
+            }
+          });
+          Object.entries(course.fields).forEach(([key, val]) => {
+            if (val !== 1) return;
+            if (!q2Sel.has(key)) adjust -= 10;
+          });
+          course._adjust = adjust;
         });
-        // おすすめ度％算出
+
+        // おすすめ度％算出（ベース＋補正、0%未満は10%に統一）
         sorted.forEach(course => {
-          course._recommendPercent = maxScore ? Math.round((course._score / maxScore) * 100) : 0;
+          const base = maxScore ? Math.round((course._score / maxScore) * 100) : 0;
+          const final = base + Math.round(course._adjust);
+          course._recommendPercent = final < 0 ? 10 : final;
         });
-        // 教職フラグに応じた上限単位分おすすめ抽出
-        sorted.sort((a,b) => b._score - a._score);
+        // おすすめ度順でソートし上限単位分を推薦マーク
+        sorted.sort((a, b) => b._recommendPercent - a._recommendPercent);
         let totalCredits = 0;
         courseData.forEach(c => { delete c.isRecommended; });
         for (const c of sorted) {
@@ -1691,6 +1724,32 @@ function showFloatMenu() {
     menu.remove();
   };
   list.appendChild(autoBtn);
+  // ─── はじめに戻る ───
+  const backBtn = document.createElement('div');
+  backBtn.className = 'menu-item';
+  backBtn.textContent = '↩ はじめに戻る';
+  backBtn.style.color = '#ff9966';
+  backBtn.style.borderTop = '1px solid #333';
+  backBtn.style.marginTop = '0.5em';
+  backBtn.style.paddingTop = '0.7em';
+  backBtn.onclick = () => {
+    if (!confirm('最初の画面に戻ります。現在の選択内容はリセットされます。よろしいですか？')) return;
+    menu.remove();
+    // 状態をリセット
+    selectedCourses = [];
+    userAnswers = { q1: [], q2: [], q3: [], q4: [], teaching: false };
+    diagnosisStep = 0;
+    aiAnalysisResult = '';
+    courseSectionOpenState = {};
+    lastDpValues = [];
+    courseData.forEach(c => { delete c.isRecommended; delete c._score; delete c._recommendPercent; delete c._adjust; });
+    // フローティングメニュー・単位数表示を除去してトップへ
+    document.getElementById('float-menu-container')?.remove();
+    document.getElementById('selected-credit-info')?.remove();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setupCyberpunkFlow();
+  };
+  list.appendChild(backBtn);
   menu.appendChild(list);
   document.body.appendChild(menu);
 }
