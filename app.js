@@ -694,7 +694,7 @@ function renderRanking() {
       <span style="font-size:1.5em;font-weight:bold;color:#fff;background:#00bfff;border-radius:50%;width:2em;height:2em;display:inline-flex;align-items:center;justify-content:center;margin-right:1em;">${idx + 1}</span>
       <span style="font-size:1.1em;font-weight:bold;color:#fff;margin-right:1em;">${course.name}</span>
       <span style="font-size:1em;color:#00ff99;background:#222;padding:0.2em 0.7em;border-radius:1em;margin-right:1em;">${course.category}</span>
-      <span style="font-size:1em;color:#ffd700;font-weight:bold;">おすすめ度 ${course._recommendPercent}%</span>
+      <span style="font-size:1em;color:#ffd700;font-weight:bold;">偏差値 ${course._recommendPercent}</span>
     `;
     rankingList.appendChild(item);
   });
@@ -1328,11 +1328,21 @@ function renderCharts() {
           course._adjust = adjust;
         });
 
-        // おすすめ度％算出（ベース＋補正、0%未満は10%に統一）
+        // 調整済みrawスコアを各科目に保存
         sorted.forEach(course => {
-          const base = maxScore ? Math.round((course._score / maxScore) * 100) : 0;
-          const final = base + Math.round(course._adjust);
-          course._recommendPercent = final < 0 ? 10 : final;
+          const base = maxScore ? (course._score / maxScore) * 100 : 0;
+          course._rawFinal = base + course._adjust;
+        });
+        // 偏差値算出（mean=50, stdDev→10スケール）
+        const rawScores = sorted.map(c => c._rawFinal);
+        const rawMean = rawScores.reduce((s, v) => s + v, 0) / (rawScores.length || 1);
+        const rawVariance = rawScores.reduce((s, v) => s + (v - rawMean) ** 2, 0) / (rawScores.length || 1);
+        const rawStdDev = Math.sqrt(rawVariance);
+        sorted.forEach(course => {
+          const hensachi = rawStdDev > 0
+            ? Math.round(50 + 10 * (course._rawFinal - rawMean) / rawStdDev)
+            : 50;
+          course._recommendPercent = Math.max(hensachi, 20); // 下限20
         });
         // おすすめ度順でソートし上限単位分を推薦マーク
         sorted.sort((a, b) => b._recommendPercent - a._recommendPercent);
@@ -1571,7 +1581,7 @@ function createCourseCard(course, selectable, showBadge) {
     badgeWrap.appendChild(badge);
     const percent = document.createElement("div");
     percent.className = "recommend-percent";
-    percent.textContent = `おすすめ度 ${course._recommendPercent}%`;
+    percent.textContent = `偏差値 ${course._recommendPercent}`;
     badgeWrap.appendChild(percent);
     info.appendChild(badgeWrap);
   }
