@@ -282,8 +282,8 @@
       Object.values(labelMap).forEach(v => { counts[v] = 0; });
       logs.forEach(l => {
         ((l.answers || {})[qKey] || []).forEach(k => {
-          const label = labelMap[k] || k;
-          counts[label] = (counts[label] || 0) + 1;
+          if (!labelMap[k]) return;  // マップにないキー（不正値・タイムスタンプ等）を除外
+          counts[labelMap[k]] = (counts[labelMap[k]] || 0) + 1;
         });
       });
       return counts;
@@ -454,8 +454,10 @@
     }
 
     // ========================
-    //  Log table
+    //  Log table → ボタン + 別ウィンドウ
     // ========================
+    let _currentDisplayLogs = [];
+
     function renderTable() {
       const raw      = getRawLogs();
       const analysis = getAnalysisLogs();
@@ -464,52 +466,89 @@
         ? [...analysis].filter(l => JSON.stringify(l).toLowerCase().includes(keyword))
         : [...analysis];
       display.reverse();
+      _currentDisplayLogs = display;
 
       document.getElementById('log-count').textContent =
         `全 ${raw.length} 件 / IP除去後 ${analysis.length} 件 / 表示 ${display.length} 件`;
 
       const area = document.getElementById('table-area');
-      if (display.length === 0) {
+      const n = display.length;
+      if (n === 0) {
         area.innerHTML = '<div id="no-log">ログがありません。</div>';
         return;
       }
 
-      const rows = display.map(l => {
-        const ans = l.answers || {};
-        const q1  = (ans.q1||[]).map(k=>`<span class="tag">${Q1_MAP[k]||k}</span>`).join('');
-        const q2  = (ans.q2||[]).map(k=>`<span class="tag">${Q2_MAP[k]||k}</span>`).join('');
-        const q3  = (ans.q3||[]).map(k=>`<span class="tag">${Q3_MAP[k]||k}</span>`).join('');
-        const q4  = (ans.q4||[]).map(k=>`<span class="tag">${Q4_MAP[k]||k}</span>`).join('') || '<span style="color:#555">なし</span>';
-        const dp  = (l.dpRate   ||'').replace(/,\s*/g,'<br>');
-        const sp  = (l.specialty||'').replace(/\n/g,' / ').replace(/,\s*/g,'<br>');
-        return `<tr>
-          <td style="white-space:nowrap;color:#8b949e;">${toJST(l.timestamp)}</td>
-          <td style="color:#8b949e;">${l.ip || '—'}</td>
-          <td><b style="color:#8b949e;font-size:0.75em;">Q1</b> ${q1}<br>
-              <b style="color:#8b949e;font-size:0.75em;">Q2</b> ${q2}<br>
-              <b style="color:#8b949e;font-size:0.75em;">Q3</b> ${q3}<br>
-              <b style="color:#8b949e;font-size:0.75em;">Q4</b> ${q4}</td>
-          <td style="color:#8b949e;">${dp}</td>
-          <td style="color:#8b949e;">${sp}</td>
-          <td style="color:#c9d1d9;">${l.aiReply||'<span style="color:#555">未取得</span>'}</td>
-          <td style="color:#555;">${getBrowserName(l.browser)} / ${getDeviceType(l.browser)}</td>
-        </tr>`;
-      }).join('');
+      // 50件ごとにボタンを生成
+      const pageSize = 50;
+      const btnEls = [];
+      if (n <= pageSize) {
+        btnEls.push(`<button class="btn-ref" style="margin:0.3em;" onclick="openLogRange(1,${n})">ログ1〜${n}</button>`);
+      } else {
+        for (let s = 1; s <= n; s += pageSize) {
+          const e = Math.min(s + pageSize - 1, n);
+          btnEls.push(`<button class="btn-ref" style="margin:0.3em;" onclick="openLogRange(${s},${e})">ログ${s}〜${e}</button>`);
+        }
+      }
+      area.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:0.4em;padding:0.8em 0;">${btnEls.join('')}</div>`;
+    }
 
-      area.innerHTML = `<table>        <colgroup>
-          <col style="width:6%">
-          <col style="width:4%">
-          <col style="width:20%">
-          <col style="width:15%">
-          <col style="width:16%">
-          <col style="width:23%">
-          <col style="width:16%">
-        </colgroup>        <thead><tr>
-          <th>日時</th><th>IP</th><th>選択内容 (Q1〜Q4)</th>
-          <th>DP獲得率</th><th>専門性・領域</th><th>AIコメント</th><th>ブラウザ/端末</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
+    function buildLogRow(l, rowNum) {
+      const ans = l.answers || {};
+      const q1  = (ans.q1||[]).map(k=>`<span class="tag">${Q1_MAP[k]||k}</span>`).join('');
+      const q2  = (ans.q2||[]).map(k=>`<span class="tag">${Q2_MAP[k]||k}</span>`).join('');
+      const q3  = (ans.q3||[]).map(k=>`<span class="tag">${Q3_MAP[k]||k}</span>`).join('');
+      const q4  = (ans.q4||[]).map(k=>`<span class="tag">${Q4_MAP[k]||k}</span>`).join('') || '<span style="color:#555">なし</span>';
+      const dp  = (l.dpRate   ||'').replace(/,\s*/g,'<br>');
+      const sp  = (l.specialty||'').replace(/\n/g,' / ').replace(/,\s*/g,'<br>');
+      return '<tr>' +
+        '<td style="color:#8b949e;text-align:center;">' + rowNum + '</td>' +
+        '<td style="white-space:nowrap;color:#8b949e;">' + toJST(l.timestamp) + '</td>' +
+        '<td style="color:#8b949e;">' + (l.ip || '—') + '</td>' +
+        '<td><b style="color:#8b949e;font-size:0.75em;">Q1</b> ' + q1 + '<br>' +
+            '<b style="color:#8b949e;font-size:0.75em;">Q2</b> ' + q2 + '<br>' +
+            '<b style="color:#8b949e;font-size:0.75em;">Q3</b> ' + q3 + '<br>' +
+            '<b style="color:#8b949e;font-size:0.75em;">Q4</b> ' + q4 + '</td>' +
+        '<td style="color:#8b949e;">' + dp + '</td>' +
+        '<td style="color:#8b949e;">' + sp + '</td>' +
+        '<td style="color:#c9d1d9;">' + (l.aiReply || '<span style="color:#555">未取得</span>') + '</td>' +
+        '<td style="color:#555;">' + getBrowserName(l.browser) + ' / ' + getDeviceType(l.browser) + '</td>' +
+        '</tr>';
+    }
+
+    function openLogRange(start1, end1) {
+      const slice = _currentDisplayLogs.slice(start1 - 1, end1);
+      const win = window.open('', '_blank', 'width=1400,height=800,scrollbars=yes,resizable=yes');
+      if (!win) { alert('ポップアップがブロックされました。ブラウザの設定を確認してください。'); return; }
+      const tableRows = slice.map((l, i) => buildLogRow(l, start1 + i)).join('');
+      win.document.open();
+      win.document.write(buildLogWindowHTML(tableRows, start1, end1, slice.length));
+      win.document.close();
+    }
+
+    function buildLogWindowHTML(tableRows, start1, end1, count) {
+      return '<!DOCTYPE html>' +
+        '<html lang="ja"><head><meta charset="UTF-8">' +
+        '<title>ログ一覧 ' + start1 + '〜' + end1 + ' | Shobi Navigator</title>' +
+        '<style>' +
+        '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }' +
+        'body { background: #0d1117; color: #c9d1d9; font-family: \'Segoe UI\', \'Hiragino Sans\', sans-serif; padding: 1em 2em 4em; }' +
+        'h2 { color: #58a6ff; font-size: 1.05em; font-weight: 700; padding: 0.8em 0; border-bottom: 1px solid #30363d; margin-bottom: 0.8em; }' +
+        'table { width: 100%; border-collapse: collapse; font-size: 0.78em; table-layout: fixed; }' +
+        'th { background: #161b22; color: #58a6ff; padding: 0.5em 0.7em; text-align: left; border-bottom: 1px solid #30363d; position: sticky; top: 0; white-space: nowrap; z-index: 1; overflow: hidden; }' +
+        'td { padding: 0.45em 0.7em; border-bottom: 1px solid #21262d; vertical-align: top; word-break: break-word; overflow-wrap: break-word; overflow: hidden; }' +
+        'tr:hover td { background: #161b22; }' +
+        '.tag { display: inline-block; background: #0d2040; border: 1px solid #30363d; border-radius: 4px; padding: 0.1em 0.4em; margin: 0.1em; font-size: 0.85em; white-space: nowrap; }' +
+        '</style></head><body>' +
+        '<h2>ログ一覧 ' + start1 + '〜' + end1 + '（' + count + ' 件）</h2>' +
+        '<table><colgroup>' +
+        '<col style="width:3%"><col style="width:9%"><col style="width:5%">' +
+        '<col style="width:21%"><col style="width:14%"><col style="width:14%">' +
+        '<col style="width:23%"><col style="width:11%">' +
+        '</colgroup><thead><tr>' +
+        '<th>#</th><th>日時</th><th>IP</th><th>選択内容 (Q1〜Q4)</th>' +
+        '<th>DP獲得率</th><th>専門性・領域</th><th>AIコメント</th><th>ブラウザ/端末</th>' +
+        '</tr></thead><tbody>' + tableRows + '</tbody></table>' +
+        '</body></html>';
     }
 
     // ========================
