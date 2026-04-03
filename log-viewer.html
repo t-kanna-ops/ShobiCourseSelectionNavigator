@@ -81,6 +81,7 @@
   <div class="controls">
     <button class="btn-ref"    onclick="reload()">GAS再取得</button>
     <button class="btn-dedup active" id="btn-dedup" onclick="toggleDedup()">重複IP除去 ON</button>
+    <button class="btn-dedup" id="btn-dp-weight" onclick="toggleWeightedDP()">Q3重みづけ OFF</button>
     <button class="btn-import" onclick="document.getElementById('file-input').click()">JSONインポート</button>
     <button class="btn-dl"     onclick="downloadLog()">JSONダウンロード</button>
     <input  id="filter" type="text" placeholder="キーワードで絞り込み..." oninput="renderTable()">
@@ -161,13 +162,13 @@
     //  定数・マップ
     // ========================
     const DP_LABELS = {
-      "1-1":"本質を見抜く力", "1-2":"創造力・発想力", "1-3":"設計・構築力",
-      "1-4":"論理的思考力", "1-5":"自己理解・自己実現力", "1-6":"独創的芸術表現力",
-      "2-1":"基礎知識・技能", "2-2":"標準専門知識・技能", "2-3":"発展専門知識・技能",
-      "2-4":"専門応用・実践力", "2-5":"専門統合力",
-      "3-1":"文章読解力", "3-2":"文章表現力", "3-3":"協調性・協働力",
-      "3-4":"基礎ITスキル", "3-5":"プレゼン能力", "3-6":"異文化理解力",
-      "4-1":"共感力・相互理解力", "4-2":"規律性・倫理観", "4-3":"自己研鑽力"
+      "1-1":"本質を見抜く力（審美眼）", "1-2":"創造力・発想力", "1-3":"設計・構築力",
+      "1-4":"論理的思考力", "1-5":"自己理解・自己実現力", "1-6":"独創的な芸術表現力",
+      "2-1":"基礎的知識・技能の修得", "2-2":"標準的専門知識・技能の修得", "2-3":"発展的専門知識・技能の修得",
+      "2-4":"専門知識・技能の応用・実践力", "2-5":"専門知識・技能の統合力",
+      "3-1":"文章読解力", "3-2":"文章表現力", "3-3":"協調性・協働する力",
+      "3-4":"基礎的ITスキル", "3-5":"プレゼンテーション能力", "3-6":"異文化理解力・外国語能力",
+      "4-1":"共感力・相互理解力", "4-2":"規律性・倫理観", "4-3":"自己研鑽力（学び続ける力）"
     };
     const Q1_MAP = {
       pops:'ポピュラー音楽', classic:'クラシック音楽', sound:'サウンドエンジニアリング',
@@ -187,6 +188,7 @@
     //  状態
     // ========================
     let dedupEnabled = true;
+    let weightedDPEnabled = false;
     let gasLogs      = null;  // GASから取得したログ
     let importedLogs = null;  // JSONインポート分
 
@@ -398,19 +400,59 @@
     // ========================
     //  DP rate bar chart
     // ========================
+    const Q3_RATES = [0.3, 0.25, 0.2, 0.15, 0.1]; // app.js と同じ優先度重み
+
     function renderDPChart(logs) {
-      const sum = {}, cnt = {};
-      logs.forEach(l => {
-        if (!l.dpRate) return;
-        Object.entries(parseKVString(l.dpRate)).forEach(([k, v]) => {
-          sum[k] = (sum[k] || 0) + v;
-          cnt[k] = (cnt[k] || 0) + 1;
-        });
-      });
-      // DP_LABELSの日本語名キーで集計（dpRateはラベル名で保存）
       const labels = Object.values(DP_LABELS);
-      const avgs   = labels.map(label => cnt[label] ? sum[label] / cnt[label] : 0);
+      let avgs;
+
+      if (weightedDPEnabled) {
+        // Q3選択順による重みづけ平均
+        // 各ログの dpRate 値を、そのユーザーの Q3 選択順に対応する重みで加重平均する
+        const wSum = {}, wTotal = {};
+        logs.forEach(l => {
+          if (!l.dpRate) return;
+          const dpValues = parseKVString(l.dpRate);
+          const q3 = (l.answers || {}).q3 || [];
+          Object.entries(DP_LABELS).forEach(([key, label]) => {
+            const val = dpValues[label] ?? 0;
+            const idx = q3.indexOf(key);
+            const weight = (idx >= 0 && idx < Q3_RATES.length) ? Q3_RATES[idx] : 0;
+            if (weight > 0) {
+              wSum[label]   = (wSum[label]   || 0) + val * weight;
+              wTotal[label] = (wTotal[label] || 0) + weight;
+            }
+          });
+        });
+        avgs = labels.map(label => wTotal[label] ? wSum[label] / wTotal[label] : 0);
+      } else {
+        // 単純平均（従来通り）
+        const sum = {}, cnt = {};
+        logs.forEach(l => {
+          if (!l.dpRate) return;
+          Object.entries(parseKVString(l.dpRate)).forEach(([k, v]) => {
+            sum[k] = (sum[k] || 0) + v;
+            cnt[k] = (cnt[k] || 0) + 1;
+          });
+        });
+        avgs = labels.map(label => cnt[label] ? sum[label] / cnt[label] : 0);
+      }
+
+      // チャートタイトル更新
+      const h3 = document.getElementById('chartDP')?.closest('.chart-card')?.querySelector('h3');
+      if (h3) h3.textContent = weightedDPEnabled
+        ? 'DP獲得率 Q3優先度重みづけ平均（分析対象ログ）'
+        : 'DP獲得率 平均値（分析対象ログ）';
+
       renderBar('chartDP', labels, avgs);
+    }
+
+    function toggleWeightedDP() {
+      weightedDPEnabled = !weightedDPEnabled;
+      const btn = document.getElementById('btn-dp-weight');
+      btn.textContent = weightedDPEnabled ? 'Q3重みづけ ON' : 'Q3重みづけ OFF';
+      btn.classList.toggle('active', weightedDPEnabled);
+      renderDPChart(getAnalysisLogs());
     }
 
     // ========================

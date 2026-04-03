@@ -198,6 +198,7 @@ if (typeof courseData === 'undefined' || typeof dpLabels === 'undefined') {
 // グローバル状態管理
 let selectedCourses = [];
 let radarChart;
+let barChart;
 let userAnswers = { q1: [], q2: [], q3: [], q4: [], teaching: false };
 let diagnosisStep = 0;
 // グローバル宣言（分析結果表示用）
@@ -536,6 +537,10 @@ function showMainApp() {
     <section id="summary-section">
       <h2>履修バランス ${hint('選択した科目のDP（ディプロマ・ポリシー）獲得状況をレーダーチャートで示しています。自分の理想に合わせた学びになるかどうか、目で見て確認できます。')}</h2>
       <canvas id="dpRadarChart" width="400" height="400"></canvas>
+      <div id="dp-bar-section" style="margin:1.5em 0;">
+        <h3 style="font-size:1em;color:#aaa;margin-bottom:0.5em;">DP獲得値（累積） ${hint('選択した科目による20のDP（ディプロマ・ポリシー）各指標の累積獲得値です。青:DP1, 緑:DP2, 黄:DP3, 赤:DP4')}</h3>
+        <canvas id="dpBarChart"></canvas>
+      </div>
       <div style="display:flex;gap:2em;justify-content:center;margin:1.5em 0;">
         <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:1em;padding-bottom:1em;min-width:200px;">
           <canvas id="fieldPieChart" width="140" height="140" style="display:block;"></canvas>
@@ -1237,6 +1242,58 @@ function renderCharts() {
   const creditSum = selected.reduce((sum, c) => sum + c.credits, 0);
   const creditSummary = document.getElementById("credit-summary");
   creditSummary.innerHTML = `選択中の合計単位: <strong>${creditSum}</strong> / ${userAnswers.teaching ? 143 : 100}単位＋教養科目24単位`;
+
+  // DP獲得値（累積）棒グラフ
+  const barCanvas = document.getElementById("dpBarChart");
+  if (barCanvas) {
+    const barCtx = barCanvas.getContext("2d");
+    if (barChart) barChart.destroy();
+    const dpGroupColors = ["#00bfff","#00ff99","#ffd700","#ff6666"];
+    const dpGroupMap = { "1-1":0,"1-2":0,"1-3":0,"1-4":0,"1-5":0,"1-6":0, "2-1":1,"2-2":1,"2-3":1,"2-4":1,"2-5":1, "3-1":2,"3-2":2,"3-3":2,"3-4":2,"3-5":2,"3-6":2, "4-1":3,"4-2":3,"4-3":3 };
+    const barColors = dpKeys.map(k => dpGroupColors[dpGroupMap[k]]);
+    const barBorderColors = barColors.map(c => c);
+    barChart = new Chart(barCtx, {
+      type: "bar",
+      data: {
+        labels: dpKeys.map(k => dpLabels[k]),
+        datasets: [{
+          label: "DP獲得値（累積）",
+          data: dpKeys.map(k => selectedDP[k]),
+          backgroundColor: barColors.map(c => c + "cc"),
+          borderColor: barBorderColors,
+          borderWidth: 1.5
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: items => items[0].label,
+              label: item => `累積獲得値: ${item.raw}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: "#aaa",
+              font: { size: 10 },
+              maxRotation: 45,
+              minRotation: 30
+            },
+            grid: { color: "#222" }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: "#aaa", font: { size: 11 } },
+            grid: { color: "#222" }
+          }
+        }
+      }
+    });
+  }
 }
 
       function recommendCourses() {
