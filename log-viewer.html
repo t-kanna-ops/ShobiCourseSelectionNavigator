@@ -519,12 +519,12 @@
             q3total += s;
           });
         });
-        // Q3スコアを0-1スケールに揃える（DP獲得率と比較可能にするため、最大値で正規化）
-        const q3max = Math.max(...Object.values(q3scores), 1);
-        const avgMax = Math.max(...avgs, 1);
+        // Q3スコアを比率に揃える（最大値ではなく合計値で正規化 → 1位項目も差分が0固定にならない）
+        const q3total2 = Math.max(Object.values(q3scores).reduce((s, v) => s + v, 0), 1e-9);
+        const avgTotal = Math.max(avgs.reduce((s, v) => s + v, 0), 1e-9);
         const diffs = labels.map(label => {
-          const dpVal  = avgs[labels.indexOf(label)] / avgMax;
-          const q3Val  = (q3scores[label] || 0) / q3max;
+          const dpVal  = avgs[labels.indexOf(label)] / avgTotal;
+          const q3Val  = (q3scores[label] || 0) / q3total2;
           return dpVal - q3Val;
         });
         renderBarDiff('chartDP', labels, diffs);
@@ -585,9 +585,10 @@
           });
         });
         const fAvgsOrdered = FIELD_LABELS_ORDER.map(l => fCnt[l] ? fSum[l] / fCnt[l] : 0);
-        const fMax  = Math.max(...fAvgsOrdered, 1);
-        const q2Max = Math.max(...Object.values(q2scores), 1);
-        const diffs = FIELD_LABELS_ORDER.map((l, i) => fAvgsOrdered[i] / fMax - (q2scores[l] || 0) / q2Max);
+        // 最大値ではなく合計値で正規化（比率比較）→ 1位項目も差分が0固定にならない
+        const fTotal  = Math.max(fAvgsOrdered.reduce((s, v) => s + v, 0), 1e-9);
+        const q2Total = Math.max(Object.values(q2scores).reduce((s, v) => s + v, 0), 1e-9);
+        const diffs = FIELD_LABELS_ORDER.map((l, i) => fAvgsOrdered[i] / fTotal - (q2scores[l] || 0) / q2Total);
         renderBarDiff('chartField', FIELD_LABELS_ORDER, diffs);
       } else {
         const fLabels = Object.keys(fSum);
@@ -607,9 +608,10 @@
           });
         });
         const dAvgsOrdered = DOMAIN_LABELS_ORDER.map(l => dCnt[l] ? dSum[l] / dCnt[l] : 0);
-        const dMax  = Math.max(...dAvgsOrdered, 1);
-        const q1Max = Math.max(...Object.values(q1scores), 1);
-        const diffs = DOMAIN_LABELS_ORDER.map((l, i) => dAvgsOrdered[i] / dMax - (q1scores[l] || 0) / q1Max);
+        // 最大値ではなく合計値で正規化（比率比較）→ 1位項目も差分が0固定にならない
+        const dTotal  = Math.max(dAvgsOrdered.reduce((s, v) => s + v, 0), 1e-9);
+        const q1Total = Math.max(Object.values(q1scores).reduce((s, v) => s + v, 0), 1e-9);
+        const diffs = DOMAIN_LABELS_ORDER.map((l, i) => dAvgsOrdered[i] / dTotal - (q1scores[l] || 0) / q1Total);
         renderBarDiff('chartDomain', DOMAIN_LABELS_ORDER, diffs);
       } else {
         const dLabels = Object.keys(dSum);
