@@ -81,7 +81,7 @@
   <div class="controls">
     <button class="btn-ref"    onclick="reload()">GAS再取得</button>
     <button class="btn-dedup active" id="btn-dedup" onclick="toggleDedup()">重複IP除去 ON</button>
-    <button class="btn-dedup" id="btn-dp-weight" onclick="toggleWeightedDP()">Q3重みづけ OFF</button>
+    <button class="btn-dedup" id="btn-q-weight" onclick="toggleWeightedQ()">回答分布 重みづけ OFF</button>
     <button class="btn-import" onclick="document.getElementById('file-input').click()">JSONインポート</button>
     <button class="btn-dl"     onclick="downloadLog()">JSONダウンロード</button>
     <input  id="filter" type="text" placeholder="キーワードで絞り込み..." oninput="renderTable()">
@@ -188,7 +188,7 @@
     //  状態
     // ========================
     let dedupEnabled = true;
-    let weightedDPEnabled = false;
+    let weightedQEnabled = false;
     let gasLogs      = null;  // GASから取得したログ
     let importedLogs = null;  // JSONインポート分
 
@@ -291,6 +291,19 @@
       return counts;
     }
 
+    // 選択順重みづけ集計: 1番目=1.0, 2番目=0.5, 3番目=0.33...と 1/(i+1) で減衰
+    function countOptionsWeighted(logs, qKey, labelMap) {
+      const scores = {};
+      Object.values(labelMap).forEach(v => { scores[v] = 0; });
+      logs.forEach(l => {
+        ((l.answers || {})[qKey] || []).forEach((k, i) => {
+          if (!labelMap[k]) return;
+          scores[labelMap[k]] = (scores[labelMap[k]] || 0) + 1 / (i + 1);
+        });
+      });
+      return scores;
+    }
+
     // ========================
     //  Chart helpers
     // ========================
@@ -304,7 +317,7 @@
       renderBarCount(canvasId, labels, data);
     }
 
-    function renderBarCount(canvasId, labels, data) {
+    function renderBarCount(canvasId, labels, data, unit = '件') {
       destroyChart(canvasId);
       const el = document.getElementById(canvasId);
       if (!el) return;
@@ -324,7 +337,7 @@
           maintainAspectRatio: false,
           plugins: {
             legend: { display: false },
-            tooltip: { callbacks: { label: c => ` ${c.raw}件` } }
+            tooltip: { callbacks: { label: c => unit === '件' ? ` ${c.raw}件` : ` スコア: ${Math.round(c.raw * 100) / 100}` } }
           },
           scales: {
             x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' }, beginAtZero: true },
@@ -346,7 +359,7 @@
         type: 'bar',
         data: {
           labels,
-          datasets: [{ label: '平均DP値', data: data.map(v => Math.round(v * 10) / 10), backgroundColor: bgColors, borderRadius: 4 }]
+          datasets: [{ label: '平均DP値', data: data.map(v => Math.round(v * 100) / 100), backgroundColor: bgColors, borderRadius: 4 }]
         },
         options: {
           indexAxis: 'y',
@@ -383,76 +396,48 @@
     //  Q1～Q4 charts
     // ========================
     function renderQCharts(logs) {
-      const q1 = countOptions(logs, 'q1', Q1_MAP);
-      const q2 = countOptions(logs, 'q2', Q2_MAP);
-      const q3 = countOptions(logs, 'q3', Q3_MAP);
-      const q4 = countOptions(logs, 'q4', Q4_MAP);
+      const fn   = weightedQEnabled ? countOptionsWeighted : countOptions;
+      const unit = weightedQEnabled ? 'score' : '件';
 
-      renderBarCount('chartQ1', Object.keys(q1), Object.values(q1));
-      renderBarCount('chartQ2', Object.keys(q2), Object.values(q2));
-      renderBarCount('chartQ3', Object.keys(q3), Object.values(q3));
-      // Q4「選択なし」集計
-      const q4None = logs.filter(l => !((l.answers||{}).q4?.length)).length;
-      if (q4None > 0) q4['選択なし'] = q4None;
-      renderBarCount('chartQ4', Object.keys(q4), Object.values(q4));
+      const q1 = fn(logs, 'q1', Q1_MAP);
+      const q2 = fn(logs, 'q2', Q2_MAP);
+      const q3 = fn(logs, 'q3', Q3_MAP);
+      const q4 = fn(logs, 'q4', Q4_MAP);
+
+      renderBarCount('chartQ1', Object.keys(q1), Object.values(q1), unit);
+      renderBarCount('chartQ2', Object.keys(q2), Object.values(q2), unit);
+      renderBarCount('chartQ3', Object.keys(q3), Object.values(q3), unit);
+      // Q4「選択なし」集計（重みづけ時は件数が持てないためスキップ）
+      if (!weightedQEnabled) {
+        const q4None = logs.filter(l => !((l.answers||{}).q4?.length)).length;
+        if (q4None > 0) q4['選択なし'] = q4None;
+      }
+      renderBarCount('chartQ4', Object.keys(q4), Object.values(q4), unit);
+    }
+
+    function toggleWeightedQ() {
+      weightedQEnabled = !weightedQEnabled;
+      const btn = document.getElementById('btn-q-weight');
+      btn.textContent = weightedQEnabled ? '回答分布 重みづけ ON' : '回答分布 重みづけ OFF';
+      btn.classList.toggle('active', weightedQEnabled);
+      renderQCharts(getAnalysisLogs());
     }
 
     // ========================
     //  DP rate bar chart
     // ========================
-    const Q3_RATES = [0.3, 0.25, 0.2, 0.15, 0.1]; // app.js と同じ優先度重み
-
     function renderDPChart(logs) {
+      const sum = {}, cnt = {};
+      logs.forEach(l => {
+        if (!l.dpRate) return;
+        Object.entries(parseKVString(l.dpRate)).forEach(([k, v]) => {
+          sum[k] = (sum[k] || 0) + v;
+          cnt[k] = (cnt[k] || 0) + 1;
+        });
+      });
       const labels = Object.values(DP_LABELS);
-      let avgs;
-
-      if (weightedDPEnabled) {
-        // Q3選択順による重みづけ平均
-        // 各ログの dpRate 値を、そのユーザーの Q3 選択順に対応する重みで加重平均する
-        const wSum = {}, wTotal = {};
-        logs.forEach(l => {
-          if (!l.dpRate) return;
-          const dpValues = parseKVString(l.dpRate);
-          const q3 = (l.answers || {}).q3 || [];
-          Object.entries(DP_LABELS).forEach(([key, label]) => {
-            const val = dpValues[label] ?? 0;
-            const idx = q3.indexOf(key);
-            const weight = (idx >= 0 && idx < Q3_RATES.length) ? Q3_RATES[idx] : 0;
-            if (weight > 0) {
-              wSum[label]   = (wSum[label]   || 0) + val * weight;
-              wTotal[label] = (wTotal[label] || 0) + weight;
-            }
-          });
-        });
-        avgs = labels.map(label => wTotal[label] ? wSum[label] / wTotal[label] : 0);
-      } else {
-        // 単純平均（従来通り）
-        const sum = {}, cnt = {};
-        logs.forEach(l => {
-          if (!l.dpRate) return;
-          Object.entries(parseKVString(l.dpRate)).forEach(([k, v]) => {
-            sum[k] = (sum[k] || 0) + v;
-            cnt[k] = (cnt[k] || 0) + 1;
-          });
-        });
-        avgs = labels.map(label => cnt[label] ? sum[label] / cnt[label] : 0);
-      }
-
-      // チャートタイトル更新
-      const h3 = document.getElementById('chartDP')?.closest('.chart-card')?.querySelector('h3');
-      if (h3) h3.textContent = weightedDPEnabled
-        ? 'DP獲得率 Q3優先度重みづけ平均（分析対象ログ）'
-        : 'DP獲得率 平均値（分析対象ログ）';
-
+      const avgs   = labels.map(label => cnt[label] ? sum[label] / cnt[label] : 0);
       renderBar('chartDP', labels, avgs);
-    }
-
-    function toggleWeightedDP() {
-      weightedDPEnabled = !weightedDPEnabled;
-      const btn = document.getElementById('btn-dp-weight');
-      btn.textContent = weightedDPEnabled ? 'Q3重みづけ ON' : 'Q3重みづけ OFF';
-      btn.classList.toggle('active', weightedDPEnabled);
-      renderDPChart(getAnalysisLogs());
     }
 
     // ========================
