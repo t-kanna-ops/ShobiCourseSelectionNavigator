@@ -84,7 +84,7 @@
     <button class="btn-dedup" id="btn-q-weight" onclick="toggleWeightedQ()">回答分布 重みづけ OFF</button>
     <button class="btn-import" onclick="document.getElementById('file-input').click()">JSONインポート</button>
     <button class="btn-dl"     onclick="downloadLog()">全ログDL</button>
-    <button class="btn-dl"     onclick="downloadFullLogs()" style="background:#1a4a2e;">全情報DL</button>
+    <button class="btn-dedup" id="btn-full-only" onclick="toggleFullOnly()">全情報のみ絞込 OFF</button>
     <input  id="filter" type="text" placeholder="キーワードで絞り込み..." oninput="renderTable()">
     <span   id="log-count"></span>
     <span   id="data-source" style="font-size:0.82em;padding:0.3em 0.7em;border-radius:4px;background:#1f2d3d;color:#8b949e;border:1px solid #30363d;">読込中...</span>
@@ -197,7 +197,8 @@
     // ========================
     //  状態
     // ========================
-    let dedupEnabled = true;
+    let dedupEnabled   = true;
+    let fullOnlyEnabled = false;
     let weightedQEnabled = false;
     let dpDiffEnabled    = false;
     let fieldDiffEnabled = false;
@@ -217,15 +218,23 @@
 
     function getAnalysisLogs() {
       const raw = getRawLogs();
-      if (!dedupEnabled) return raw;
-      const ipMap = new Map();
-      raw.forEach(l => {
-        const key = l.ip ? l.ip : ('__noip__' + l.timestamp);
-        if (!ipMap.has(key) || new Date(l.timestamp) > new Date(ipMap.get(key).timestamp)) {
-          ipMap.set(key, l);
-        }
-      });
-      return Array.from(ipMap.values());
+      let logs = raw;
+      // 重複IP除去
+      if (dedupEnabled) {
+        const ipMap = new Map();
+        logs.forEach(l => {
+          const key = l.ip ? l.ip : ('__noip__' + l.timestamp);
+          if (!ipMap.has(key) || new Date(l.timestamp) > new Date(ipMap.get(key).timestamp)) {
+            ipMap.set(key, l);
+          }
+        });
+        logs = Array.from(ipMap.values());
+      }
+      // 全情報のみ絞込（dpRate + specialty + aiReply すべてあり）
+      if (fullOnlyEnabled) {
+        logs = logs.filter(l => l.dpRate && l.specialty && l.aiReply);
+      }
+      return logs;
     }
 
     // ========================
@@ -768,18 +777,13 @@
       document.body.removeChild(a); URL.revokeObjectURL(url);
     }
 
-    // DP獲得率・専門性・ AIコメントすべてあるログのみダウンロード
-    function downloadFullLogs() {
-      const logs = getRawLogs().filter(l => l.dpRate && l.specialty && l.aiReply);
-      if (logs.length === 0) { alert('DP獲得率・専門性・AIコメントすべてを含むログがありません。'); return; }
-      const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      const date = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-      a.href = url; a.download = `shobi_log_full_${date}.json`;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a); URL.revokeObjectURL(url);
-      alert(`全情報あり: ${logs.length}件 / 全体: ${getRawLogs().length}件`);
+    // DP獲得率・専門性・AIコメントすべてあるログのみ絞込トグル
+    function toggleFullOnly() {
+      fullOnlyEnabled = !fullOnlyEnabled;
+      const btn = document.getElementById('btn-full-only');
+      btn.textContent = fullOnlyEnabled ? '全情報のみ絞込 ON' : '全情報のみ絞込 OFF';
+      btn.classList.toggle('active', fullOnlyEnabled);
+      renderAll();
     }
 
     function clearLog() {
