@@ -85,6 +85,7 @@
     <button class="btn-import" onclick="document.getElementById('file-input').click()">JSONインポート</button>
     <button class="btn-dl"     onclick="downloadLog()">全ログDL</button>
     <button class="btn-dedup" id="btn-full-only" onclick="toggleFullOnly()">全情報のみ絞込 OFF</button>
+    <button class="btn-dedup" id="btn-min-course" onclick="toggleMinCourse()">科目数 30未満除外 OFF</button>
     <input  id="filter" type="text" placeholder="キーワードで絞り込み..." oninput="renderTable()">
     <span   id="log-count"></span>
     <span   id="data-source" style="font-size:0.82em;padding:0.3em 0.7em;border-radius:4px;background:#1f2d3d;color:#8b949e;border:1px solid #30363d;">読込中...</span>
@@ -197,8 +198,9 @@
     // ========================
     //  状態
     // ========================
-    let dedupEnabled   = true;
-    let fullOnlyEnabled = false;
+    let dedupEnabled    = true;
+    let fullOnlyEnabled  = false;
+    let minCourseEnabled = false;
     let weightedQEnabled = false;
     let dpDiffEnabled    = false;
     let fieldDiffEnabled = false;
@@ -233,6 +235,17 @@
       // 全情報のみ絞込（dpRate + specialty + aiReply すべてあり）
       if (fullOnlyEnabled) {
         logs = logs.filter(l => l.dpRate && l.specialty && l.aiReply);
+      }
+      // 科目数 30未満除外（specialtyあり行限定でフィールド合計 < 30を除外）
+      if (minCourseEnabled) {
+        logs = logs.filter(l => {
+          if (!l.specialty) return true; // specialtyなしは除外対象外
+          const line = l.specialty.split('\n').find(s => s.startsWith('フィールド:'));
+          if (!line) return true;
+          const vals = parseKVString(line.replace(/^フィールド:\s*/, ''));
+          const total = Object.values(vals).reduce((s, v) => s + v, 0);
+          return total >= 30;
+        });
       }
       return logs;
     }
@@ -775,6 +788,15 @@
       a.href = url; a.download = `shobi_log_${date}.json`;
       document.body.appendChild(a); a.click();
       document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
+
+    // 科目数 30未満除外トグル
+    function toggleMinCourse() {
+      minCourseEnabled = !minCourseEnabled;
+      const btn = document.getElementById('btn-min-course');
+      btn.textContent = minCourseEnabled ? '科目数 30未満除外 ON' : '科目数 30未満除外 OFF';
+      btn.classList.toggle('active', minCourseEnabled);
+      renderAll();
     }
 
     // DP獲得率・専門性・AIコメントすべてあるログのみ絞込トグル
